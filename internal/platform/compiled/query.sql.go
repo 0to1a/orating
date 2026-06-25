@@ -1383,6 +1383,38 @@ func (q *Queries) RatingGetFormsForEvent(ctx context.Context, eventID int64) ([]
 	return items, nil
 }
 
+const ratingGetMonitorCounts = `-- name: RatingGetMonitorCounts :one
+WITH ev AS (
+    SELECT events.id, events.active_cycle_id FROM events WHERE events.id = $1
+),
+pc AS (
+    SELECT COUNT(participants.id)::bigint AS cnt FROM participants WHERE participants.event_id = $1
+),
+rc AS (
+    SELECT COUNT(responses.id)::bigint AS cnt
+    FROM ev
+    JOIN responses ON responses.cycle_id = ev.active_cycle_id
+)
+SELECT
+    pc.cnt AS participant_count,
+    rc.cnt AS responded_count,
+    ev.active_cycle_id
+FROM ev, pc, rc
+`
+
+type RatingGetMonitorCountsRow struct {
+	ParticipantCount int64
+	RespondedCount   int64
+	ActiveCycleID    pgtype.Int8
+}
+
+func (q *Queries) RatingGetMonitorCounts(ctx context.Context, id int64) (RatingGetMonitorCountsRow, error) {
+	row := q.db.QueryRow(ctx, ratingGetMonitorCounts, id)
+	var i RatingGetMonitorCountsRow
+	err := row.Scan(&i.ParticipantCount, &i.RespondedCount, &i.ActiveCycleID)
+	return i, err
+}
+
 const ratingGetParticipant = `-- name: RatingGetParticipant :one
 SELECT id, event_id, user_id, joined_at FROM participants WHERE event_id = $1 AND user_id = $2
 `

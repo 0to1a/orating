@@ -139,4 +139,13 @@ func Setup(_ context.Context, deps platform.Deps) {
 		Security:      humax.BearerAuth(),
 		DefaultStatus: http.StatusCreated,
 	}, h.handleRespond)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID: "get-event-monitor",
+		Method:      http.MethodGet,
+		Path:        "/api/events/{id}/monitor",
+		Summary:     "Get monitor counts for the active cycle",
+		Tags:        []string{"rating"},
+		Security:    humax.BearerAuth(),
+	}, h.handleGetMonitor)
 }

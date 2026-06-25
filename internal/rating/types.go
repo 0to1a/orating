@@ -162,3 +162,17 @@ type RespondInput struct {
 	ID   int64 `path:"id"`
 	Body RespondRequest
 }
+
+type MonitorResponse struct {
+	ParticipantCount int64  `json:"participantCount"`
+	RespondedCount   int64  `json:"respondedCount"`
+	ActiveCycleID    *int64 `json:"activeCycleId,omitempty"`
+}
+
+type GetMonitorInput struct {
+	ID int64 `path:"id"`
+}
+
+type GetMonitorOutput struct {
+	Body MonitorResponse
+}

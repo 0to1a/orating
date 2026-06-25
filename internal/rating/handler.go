@@ -709,6 +709,43 @@ func (h *Handler) handleRespond(ctx context.Context, input *RespondInput) (*stru
 	return nil, nil
 }
 
+func (h *Handler) handleGetMonitor(ctx context.Context, input *GetMonitorInput) (*GetMonitorOutput, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+	if eventRow.HostID != p.UserID {
+		return nil, humax.Forbidden("only the event host can view monitor")
+	}
+
+	row, err := h.deps.Queries.RatingGetMonitorCounts(ctx, input.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := MonitorResponse{
+		ParticipantCount: row.ParticipantCount,
+		RespondedCount:   row.RespondedCount,
+	}
+	if row.ActiveCycleID.Valid {
+		cycleID := row.ActiveCycleID.Int64
+		resp.ActiveCycleID = &cycleID
+	}
+
+	return &GetMonitorOutput{Body: resp}, nil
+}
+
 // eventInfoFromRow maps a compiled.Event to EventInfo.
 func eventInfoFromRow(r compiled.Event) EventInfo {
 	var desc string
