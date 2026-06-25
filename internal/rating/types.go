@@ -116,3 +116,49 @@ type NextCycleInput struct {
 	ID   int64 `path:"id"`
 	Body NextCycleRequest
 }
+
+type SessionResponse struct {
+	CurrentStage        string     `json:"currentStage"`
+	ActiveCycleID       *int64     `json:"activeCycleId,omitempty"`
+	ActiveCycleName     string     `json:"activeCycleName,omitempty"`
+	MyResponseSubmitted bool       `json:"myResponseSubmitted"`
+	Forms               []FormInfo `json:"forms"`
+}
+
+type RespondItemInput struct {
+	FormID      int64   `json:"formId"`
+	ValueNumber *int32  `json:"valueNumber,omitempty"`
+	ValueText   *string `json:"valueText,omitempty"`
+}
+
+type RespondRequest struct {
+	Items []RespondItemInput `json:"items"`
+}
+
+type ParticipantInfo struct {
+	ID       int64     `json:"id"`
+	EventID  int64     `json:"eventId"`
+	UserID   int64     `json:"userId"`
+	JoinedAt time.Time `json:"joinedAt"`
+}
+
+type JoinEventInput struct {
+	ID int64 `path:"id"`
+}
+
+type JoinEventOutput struct {
+	Body ParticipantInfo
+}
+
+type GetSessionInput struct {
+	ID int64 `path:"id"`
+}
+
+type GetSessionOutput struct {
+	Body SessionResponse
+}
+
+type RespondInput struct {
+	ID   int64 `path:"id"`
+	Body RespondRequest
+}

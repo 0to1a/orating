@@ -110,4 +110,33 @@ func Setup(_ context.Context, deps platform.Deps) {
 		Security:      humax.BearerAuth(),
 		DefaultStatus: http.StatusNoContent,
 	}, h.handleEndEvent)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "join-event",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/join",
+		Summary:       "Join a rating event as a rater",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusCreated,
+	}, h.handleJoin)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID: "get-event-session",
+		Method:      http.MethodGet,
+		Path:        "/api/events/{id}/session",
+		Summary:     "Get current session state for rater polling",
+		Tags:        []string{"rating"},
+		Security:    humax.BearerAuth(),
+	}, h.handleGetSession)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "respond-to-cycle",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/respond",
+		Summary:       "Submit rater responses for the current cycle",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusCreated,
+	}, h.handleRespond)
 }

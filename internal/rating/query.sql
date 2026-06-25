@@ -81,3 +81,42 @@ RETURNING id;
 
 -- name: RatingGetCycleByEvent :one
 SELECT * FROM cycles WHERE id = $1 AND event_id = $2;
+
+-- name: RatingGetEventByID :one
+SELECT * FROM events WHERE id = $1;
+
+-- name: RatingJoinEvent :one
+INSERT INTO participants (event_id, user_id)
+VALUES ($1, $2)
+ON CONFLICT (event_id, user_id) DO NOTHING
+RETURNING *;
+
+-- name: RatingGetParticipant :one
+SELECT * FROM participants WHERE event_id = $1 AND user_id = $2;
+
+-- name: RatingGetEventForSession :one
+SELECT id, status, current_stage, active_cycle_id FROM events WHERE id = $1 AND company_id = $2;
+
+-- name: RatingGetCycleByID :one
+SELECT id, name, order_index FROM cycles WHERE id = $1;
+
+-- name: RatingGetFormsForEvent :many
+SELECT id, event_id, type, label, order_index FROM forms WHERE event_id = $1 ORDER BY order_index;
+
+-- name: RatingGetResponseForParticipantCycle :one
+SELECT id FROM responses WHERE cycle_id = $1 AND participant_id = $2;
+
+-- name: RatingInsertResponse :one
+INSERT INTO responses (cycle_id, participant_id)
+VALUES ($1, $2)
+RETURNING id, submitted_at;
+
+-- name: RatingInsertResponseItem :exec
+INSERT INTO response_items (response_id, form_id, value_number, value_text)
+VALUES ($1, $2, $3, $4);
+
+-- name: RatingGetEventMemberCheck :one
+SELECT event_id FROM event_members WHERE event_id = $1 AND user_id = $2;
+
+-- name: RatingGetFormByID :one
+SELECT id, event_id, type FROM forms WHERE id = $1;

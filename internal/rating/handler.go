@@ -462,6 +462,253 @@ func (h *Handler) handleEndEvent(ctx context.Context, input *EventIDInput) (*str
 	return nil, nil
 }
 
+func (h *Handler) handleJoin(ctx context.Context, input *JoinEventInput) (*JoinEventOutput, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+	if eventRow.Status != "active" {
+		return nil, humax.Unprocessable("event is not active")
+	}
+	if eventRow.Visibility == "private" {
+		_, err := h.deps.Queries.RatingGetEventMemberCheck(ctx, compiled.RatingGetEventMemberCheckParams{
+			EventID: input.ID,
+			UserID:  p.UserID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, humax.Forbidden("not invited to this private event")
+			}
+			return nil, err
+		}
+	}
+
+	_, err = h.deps.Queries.RatingJoinEvent(ctx, compiled.RatingJoinEventParams{
+		EventID: input.ID,
+		UserID:  p.UserID,
+	})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	participant, err := h.deps.Queries.RatingGetParticipant(ctx, compiled.RatingGetParticipantParams{
+		EventID: input.ID,
+		UserID:  p.UserID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &JoinEventOutput{
+		Body: ParticipantInfo{
+			ID:       participant.ID,
+			EventID:  participant.EventID,
+			UserID:   participant.UserID,
+			JoinedAt: participant.JoinedAt.Time.UTC(),
+		},
+	}, nil
+}
+
+func (h *Handler) handleGetSession(ctx context.Context, input *GetSessionInput) (*GetSessionOutput, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+
+	resp := SessionResponse{
+		CurrentStage: eventRow.CurrentStage,
+		Forms:        []FormInfo{},
+	}
+
+	if eventRow.ActiveCycleID.Valid {
+		cycleID := eventRow.ActiveCycleID.Int64
+		resp.ActiveCycleID = &cycleID
+
+		cycleRow, err := h.deps.Queries.RatingGetCycleByID(ctx, cycleID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		if err == nil {
+			resp.ActiveCycleName = cycleRow.Name
+		}
+	}
+
+	if eventRow.CurrentStage == "form_open" {
+		formRows, err := h.deps.Queries.RatingGetFormsForEvent(ctx, input.ID)
+		if err != nil {
+			return nil, err
+		}
+		forms := make([]FormInfo, len(formRows))
+		for i, f := range formRows {
+			forms[i] = FormInfo{
+				ID:         f.ID,
+				EventID:    f.EventID,
+				Type:       f.Type,
+				Label:      f.Label,
+				OrderIndex: f.OrderIndex,
+			}
+		}
+		resp.Forms = forms
+	}
+
+	if eventRow.ActiveCycleID.Valid {
+		participant, err := h.deps.Queries.RatingGetParticipant(ctx, compiled.RatingGetParticipantParams{
+			EventID: input.ID,
+			UserID:  p.UserID,
+		})
+		if err == nil {
+			_, err2 := h.deps.Queries.RatingGetResponseForParticipantCycle(ctx, compiled.RatingGetResponseForParticipantCycleParams{
+				CycleID:       eventRow.ActiveCycleID.Int64,
+				ParticipantID: participant.ID,
+			})
+			if err2 == nil {
+				resp.MyResponseSubmitted = true
+			}
+		}
+	}
+
+	return &GetSessionOutput{Body: resp}, nil
+}
+
+func (h *Handler) handleRespond(ctx context.Context, input *RespondInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+	if eventRow.Status != "active" {
+		return nil, humax.Unprocessable("event is not active")
+	}
+	if eventRow.CurrentStage != "form_open" {
+		return nil, humax.Unprocessable("form is not open")
+	}
+	if !eventRow.ActiveCycleID.Valid {
+		return nil, humax.Unprocessable("no active cycle")
+	}
+
+	participant, err := h.deps.Queries.RatingGetParticipant(ctx, compiled.RatingGetParticipantParams{
+		EventID: input.ID,
+		UserID:  p.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("must join event first")
+		}
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingGetResponseForParticipantCycle(ctx, compiled.RatingGetResponseForParticipantCycleParams{
+		CycleID:       eventRow.ActiveCycleID.Int64,
+		ParticipantID: participant.ID,
+	})
+	if err == nil {
+		return nil, humax.Conflict("already responded for this cycle")
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	for _, item := range input.Body.Items {
+		formRow, err := h.deps.Queries.RatingGetFormByID(ctx, item.FormID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, humax.BadRequest("form not found")
+			}
+			return nil, err
+		}
+		if formRow.EventID != input.ID {
+			return nil, humax.BadRequest("form does not belong to this event")
+		}
+		switch formRow.Type {
+		case "rating":
+			if item.ValueNumber == nil || *item.ValueNumber < 1 || *item.ValueNumber > 5 {
+				return nil, humax.BadRequest("rating value must be between 1 and 5")
+			}
+		case "mood":
+			if item.ValueNumber == nil || *item.ValueNumber < 1 || *item.ValueNumber > 4 {
+				return nil, humax.BadRequest("mood value must be between 1 and 4")
+			}
+		case "free_text":
+			if item.ValueText == nil || *item.ValueText == "" {
+				return nil, humax.BadRequest("free text value is required")
+			}
+		}
+	}
+
+	tx, err := h.deps.Pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	q := compiled.New(tx)
+
+	responseRow, err := q.RatingInsertResponse(ctx, compiled.RatingInsertResponseParams{
+		CycleID:       eventRow.ActiveCycleID.Int64,
+		ParticipantID: participant.ID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range input.Body.Items {
+		var valNum pgtype.Int4
+		if item.ValueNumber != nil {
+			valNum = pgtype.Int4{Int32: *item.ValueNumber, Valid: true}
+		}
+		var valText pgtype.Text
+		if item.ValueText != nil {
+			valText = pgtype.Text{String: *item.ValueText, Valid: true}
+		}
+		if err := q.RatingInsertResponseItem(ctx, compiled.RatingInsertResponseItemParams{
+			ResponseID:  responseRow.ID,
+			FormID:      item.FormID,
+			ValueNumber: valNum,
+			ValueText:   valText,
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // eventInfoFromRow maps a compiled.Event to EventInfo.
 func eventInfoFromRow(r compiled.Event) EventInfo {
 	var desc string
