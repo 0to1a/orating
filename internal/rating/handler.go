@@ -333,6 +333,135 @@ func (h *Handler) handleRemoveMember(ctx context.Context, input *RemoveMemberInp
 	return nil, nil
 }
 
+func (h *Handler) handleActivate(ctx context.Context, input *EventIDInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingActivateEvent(ctx, compiled.RatingActivateEventParams{
+		ID:        input.ID,
+		CompanyID: p.SelectedCompanyID,
+		HostID:    p.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("event not found or already active")
+		}
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (h *Handler) handleStartCycle(ctx context.Context, input *StartCycleInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingGetCycleByEvent(ctx, compiled.RatingGetCycleByEventParams{
+		ID:      input.Body.CycleID,
+		EventID: input.ID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("cycle does not belong to this event")
+		}
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingStartCycle(ctx, compiled.RatingStartCycleParams{
+		ID:            input.ID,
+		CompanyID:     p.SelectedCompanyID,
+		HostID:        p.UserID,
+		ActiveCycleID: pgtype.Int8{Int64: input.Body.CycleID, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("event not active")
+		}
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (h *Handler) handleShowForm(ctx context.Context, input *EventIDInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingShowForm(ctx, compiled.RatingShowFormParams{
+		ID:        input.ID,
+		CompanyID: p.SelectedCompanyID,
+		HostID:    p.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("event not in waiting stage")
+		}
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (h *Handler) handleNextCycle(ctx context.Context, input *NextCycleInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingGetCycleByEvent(ctx, compiled.RatingGetCycleByEventParams{
+		ID:      input.Body.CycleID,
+		EventID: input.ID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("cycle does not belong to this event")
+		}
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingNextCycle(ctx, compiled.RatingNextCycleParams{
+		ID:            input.ID,
+		CompanyID:     p.SelectedCompanyID,
+		HostID:        p.UserID,
+		ActiveCycleID: pgtype.Int8{Int64: input.Body.CycleID, Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("event not active")
+		}
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (h *Handler) handleEndEvent(ctx context.Context, input *EventIDInput) (*struct{}, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = h.deps.Queries.RatingEndEvent(ctx, compiled.RatingEndEventParams{
+		ID:        input.ID,
+		CompanyID: p.SelectedCompanyID,
+		HostID:    p.UserID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.Unprocessable("event not active")
+		}
+		return nil, err
+	}
+
+	return nil, nil
+}
+
 // eventInfoFromRow maps a compiled.Event to EventInfo.
 func eventInfoFromRow(r compiled.Event) EventInfo {
 	var desc string

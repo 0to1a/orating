@@ -917,6 +917,26 @@ func (q *Queries) FFUpsert(ctx context.Context, arg FFUpsertParams) (FFUpsertRow
 	return i, err
 }
 
+const ratingActivateEvent = `-- name: RatingActivateEvent :one
+UPDATE events
+SET status = 'active', current_stage = 'idle', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'draft'
+RETURNING id
+`
+
+type RatingActivateEventParams struct {
+	ID        int64
+	CompanyID int64
+	HostID    int64
+}
+
+func (q *Queries) RatingActivateEvent(ctx context.Context, arg RatingActivateEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ratingActivateEvent, arg.ID, arg.CompanyID, arg.HostID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const ratingAddEventMember = `-- name: RatingAddEventMember :exec
 INSERT INTO event_members (event_id, user_id) VALUES ($1, $2)
 `
@@ -1066,6 +1086,26 @@ func (q *Queries) RatingCreateUser(ctx context.Context, arg RatingCreateUserPara
 	return i, err
 }
 
+const ratingEndEvent = `-- name: RatingEndEvent :one
+UPDATE events
+SET status = 'ended', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'active'
+RETURNING id
+`
+
+type RatingEndEventParams struct {
+	ID        int64
+	CompanyID int64
+	HostID    int64
+}
+
+func (q *Queries) RatingEndEvent(ctx context.Context, arg RatingEndEventParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ratingEndEvent, arg.ID, arg.CompanyID, arg.HostID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const ratingFindUserByEmail = `-- name: RatingFindUserByEmail :one
 SELECT id, email, name FROM users WHERE email = $1 AND deleted_at IS NULL
 `
@@ -1080,6 +1120,27 @@ func (q *Queries) RatingFindUserByEmail(ctx context.Context, email string) (Rati
 	row := q.db.QueryRow(ctx, ratingFindUserByEmail, email)
 	var i RatingFindUserByEmailRow
 	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	return i, err
+}
+
+const ratingGetCycleByEvent = `-- name: RatingGetCycleByEvent :one
+SELECT id, event_id, name, order_index FROM cycles WHERE id = $1 AND event_id = $2
+`
+
+type RatingGetCycleByEventParams struct {
+	ID      int64
+	EventID int64
+}
+
+func (q *Queries) RatingGetCycleByEvent(ctx context.Context, arg RatingGetCycleByEventParams) (Cycle, error) {
+	row := q.db.QueryRow(ctx, ratingGetCycleByEvent, arg.ID, arg.EventID)
+	var i Cycle
+	err := row.Scan(
+		&i.ID,
+		&i.EventID,
+		&i.Name,
+		&i.OrderIndex,
+	)
 	return i, err
 }
 
@@ -1237,6 +1298,32 @@ func (q *Queries) RatingListEvents(ctx context.Context, arg RatingListEventsPara
 	return items, nil
 }
 
+const ratingNextCycle = `-- name: RatingNextCycle :one
+UPDATE events
+SET active_cycle_id = $2, current_stage = 'waiting', updated_at = NOW()
+WHERE id = $1 AND company_id = $3 AND host_id = $4 AND status = 'active'
+RETURNING id
+`
+
+type RatingNextCycleParams struct {
+	ID            int64
+	ActiveCycleID pgtype.Int8
+	CompanyID     int64
+	HostID        int64
+}
+
+func (q *Queries) RatingNextCycle(ctx context.Context, arg RatingNextCycleParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ratingNextCycle,
+		arg.ID,
+		arg.ActiveCycleID,
+		arg.CompanyID,
+		arg.HostID,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const ratingRemoveEventMember = `-- name: RatingRemoveEventMember :exec
 DELETE FROM event_members WHERE event_id = $1 AND user_id = $2
 `
@@ -1249,6 +1336,52 @@ type RatingRemoveEventMemberParams struct {
 func (q *Queries) RatingRemoveEventMember(ctx context.Context, arg RatingRemoveEventMemberParams) error {
 	_, err := q.db.Exec(ctx, ratingRemoveEventMember, arg.EventID, arg.UserID)
 	return err
+}
+
+const ratingShowForm = `-- name: RatingShowForm :one
+UPDATE events
+SET current_stage = 'form_open', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'active' AND current_stage = 'waiting'
+RETURNING id
+`
+
+type RatingShowFormParams struct {
+	ID        int64
+	CompanyID int64
+	HostID    int64
+}
+
+func (q *Queries) RatingShowForm(ctx context.Context, arg RatingShowFormParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ratingShowForm, arg.ID, arg.CompanyID, arg.HostID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const ratingStartCycle = `-- name: RatingStartCycle :one
+UPDATE events
+SET active_cycle_id = $2, current_stage = 'waiting', updated_at = NOW()
+WHERE id = $1 AND company_id = $3 AND host_id = $4 AND status = 'active'
+RETURNING id
+`
+
+type RatingStartCycleParams struct {
+	ID            int64
+	ActiveCycleID pgtype.Int8
+	CompanyID     int64
+	HostID        int64
+}
+
+func (q *Queries) RatingStartCycle(ctx context.Context, arg RatingStartCycleParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ratingStartCycle,
+		arg.ID,
+		arg.ActiveCycleID,
+		arg.CompanyID,
+		arg.HostID,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const userGetByID = `-- name: UserGetByID :one

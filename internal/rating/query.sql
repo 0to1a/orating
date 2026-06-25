@@ -48,3 +48,36 @@ SELECT id, email, name FROM users WHERE email = $1 AND deleted_at IS NULL;
 
 -- name: RatingCreateUser :one
 INSERT INTO users (email, name) VALUES ($1, $2) RETURNING id, email, name;
+
+-- name: RatingActivateEvent :one
+UPDATE events
+SET status = 'active', current_stage = 'idle', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'draft'
+RETURNING id;
+
+-- name: RatingStartCycle :one
+UPDATE events
+SET active_cycle_id = $2, current_stage = 'waiting', updated_at = NOW()
+WHERE id = $1 AND company_id = $3 AND host_id = $4 AND status = 'active'
+RETURNING id;
+
+-- name: RatingShowForm :one
+UPDATE events
+SET current_stage = 'form_open', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'active' AND current_stage = 'waiting'
+RETURNING id;
+
+-- name: RatingNextCycle :one
+UPDATE events
+SET active_cycle_id = $2, current_stage = 'waiting', updated_at = NOW()
+WHERE id = $1 AND company_id = $3 AND host_id = $4 AND status = 'active'
+RETURNING id;
+
+-- name: RatingEndEvent :one
+UPDATE events
+SET status = 'ended', updated_at = NOW()
+WHERE id = $1 AND company_id = $2 AND host_id = $3 AND status = 'active'
+RETURNING id;
+
+-- name: RatingGetCycleByEvent :one
+SELECT * FROM cycles WHERE id = $1 AND event_id = $2;

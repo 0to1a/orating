@@ -60,4 +60,54 @@ func Setup(_ context.Context, deps platform.Deps) {
 		Security:      humax.BearerAuth(),
 		DefaultStatus: http.StatusNoContent,
 	}, h.handleRemoveMember)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "activate-event",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/activate",
+		Summary:       "Activate an event",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusNoContent,
+	}, h.handleActivate)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "start-cycle",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/start-cycle",
+		Summary:       "Start a cycle",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusNoContent,
+	}, h.handleStartCycle)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "show-form",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/show-form",
+		Summary:       "Open the rating form for the current cycle",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusNoContent,
+	}, h.handleShowForm)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "next-cycle",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/next-cycle",
+		Summary:       "Advance to the next cycle",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusNoContent,
+	}, h.handleNextCycle)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID:   "end-event",
+		Method:        http.MethodPost,
+		Path:          "/api/events/{id}/end",
+		Summary:       "End an event",
+		Tags:          []string{"rating"},
+		Security:      humax.BearerAuth(),
+		DefaultStatus: http.StatusNoContent,
+	}, h.handleEndEvent)
 }

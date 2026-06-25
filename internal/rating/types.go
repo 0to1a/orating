@@ -94,3 +94,25 @@ type RemoveMemberInput struct {
 	EventID int64 `path:"id"`
 	UserID  int64 `path:"userId"`
 }
+
+type StartCycleRequest struct {
+	CycleID int64 `json:"cycleId"`
+}
+
+type NextCycleRequest struct {
+	CycleID int64 `json:"cycleId"`
+}
+
+type EventIDInput struct {
+	ID int64 `path:"id"`
+}
+
+type StartCycleInput struct {
+	ID   int64 `path:"id"`
+	Body StartCycleRequest
+}
+
+type NextCycleInput struct {
+	ID   int64 `path:"id"`
+	Body NextCycleRequest
+}
