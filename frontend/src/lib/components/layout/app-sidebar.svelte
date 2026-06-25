@@ -4,12 +4,14 @@
 	import CompanySwitcher from './company-switcher.svelte';
 	import NavUser from './nav-user.svelte';
 	import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+	import Star from '@lucide/svelte/icons/star';
 	import type { ComponentProps } from 'svelte';
 
 	let { ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
 	const navItems = [
-		{ href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard }
+		{ href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+		{ href: '/app/events', label: 'Events', icon: Star }
 	];
 </script>
 
