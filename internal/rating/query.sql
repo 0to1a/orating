@@ -138,3 +138,30 @@ SELECT
     rc.cnt AS responded_count,
     ev.active_cycle_id
 FROM ev, pc, rc;
+
+-- name: RatingGetResultAverages :many
+SELECT
+    c.id AS cycle_id,
+    f.id AS form_id,
+    AVG(ri.value_number)::float8 AS average
+FROM cycles c
+JOIN responses r ON r.cycle_id = c.id
+JOIN response_items ri ON ri.response_id = r.id
+JOIN forms f ON f.id = ri.form_id
+WHERE c.event_id = $1
+  AND f.type IN ('rating', 'mood')
+GROUP BY c.id, f.id;
+
+-- name: RatingGetResultFreeTexts :many
+SELECT
+    c.id AS cycle_id,
+    f.id AS form_id,
+    ri.value_text
+FROM cycles c
+JOIN responses r ON r.cycle_id = c.id
+JOIN response_items ri ON ri.response_id = r.id
+JOIN forms f ON f.id = ri.form_id
+WHERE c.event_id = $1
+  AND f.type = 'free_text'
+  AND ri.value_text IS NOT NULL
+ORDER BY c.order_index, f.order_index;

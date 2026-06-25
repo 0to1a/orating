@@ -1452,6 +1452,87 @@ func (q *Queries) RatingGetResponseForParticipantCycle(ctx context.Context, arg 
 	return id, err
 }
 
+const ratingGetResultAverages = `-- name: RatingGetResultAverages :many
+SELECT
+    c.id AS cycle_id,
+    f.id AS form_id,
+    AVG(ri.value_number)::float8 AS average
+FROM cycles c
+JOIN responses r ON r.cycle_id = c.id
+JOIN response_items ri ON ri.response_id = r.id
+JOIN forms f ON f.id = ri.form_id
+WHERE c.event_id = $1
+  AND f.type IN ('rating', 'mood')
+GROUP BY c.id, f.id
+`
+
+type RatingGetResultAveragesRow struct {
+	CycleID int64
+	FormID  int64
+	Average float64
+}
+
+func (q *Queries) RatingGetResultAverages(ctx context.Context, eventID int64) ([]RatingGetResultAveragesRow, error) {
+	rows, err := q.db.Query(ctx, ratingGetResultAverages, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RatingGetResultAveragesRow
+	for rows.Next() {
+		var i RatingGetResultAveragesRow
+		if err := rows.Scan(&i.CycleID, &i.FormID, &i.Average); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingGetResultFreeTexts = `-- name: RatingGetResultFreeTexts :many
+SELECT
+    c.id AS cycle_id,
+    f.id AS form_id,
+    ri.value_text
+FROM cycles c
+JOIN responses r ON r.cycle_id = c.id
+JOIN response_items ri ON ri.response_id = r.id
+JOIN forms f ON f.id = ri.form_id
+WHERE c.event_id = $1
+  AND f.type = 'free_text'
+  AND ri.value_text IS NOT NULL
+ORDER BY c.order_index, f.order_index
+`
+
+type RatingGetResultFreeTextsRow struct {
+	CycleID   int64
+	FormID    int64
+	ValueText pgtype.Text
+}
+
+func (q *Queries) RatingGetResultFreeTexts(ctx context.Context, eventID int64) ([]RatingGetResultFreeTextsRow, error) {
+	rows, err := q.db.Query(ctx, ratingGetResultFreeTexts, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RatingGetResultFreeTextsRow
+	for rows.Next() {
+		var i RatingGetResultFreeTextsRow
+		if err := rows.Scan(&i.CycleID, &i.FormID, &i.ValueText); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const ratingInsertResponse = `-- name: RatingInsertResponse :one
 INSERT INTO responses (cycle_id, participant_id)
 VALUES ($1, $2)

@@ -176,3 +176,34 @@ type GetMonitorInput struct {
 type GetMonitorOutput struct {
 	Body MonitorResponse
 }
+
+type CycleAverageResult struct {
+	CycleID int64   `json:"cycleId"`
+	FormID  int64   `json:"formId"`
+	Average float64 `json:"average"`
+}
+
+type FreeTextResult struct {
+	CycleID int64    `json:"cycleId"`
+	FormID  int64    `json:"formId"`
+	Texts   []string `json:"texts"`
+}
+
+type ResultsResponse struct {
+	Cycles    []CycleInfo          `json:"cycles"`
+	Forms     []FormInfo           `json:"forms"`
+	AvgTable  []CycleAverageResult `json:"avgTable"`
+	FreeTexts []FreeTextResult     `json:"freeTexts"`
+}
+
+type GetResultsInput struct {
+	ID int64 `path:"id"`
+}
+
+type GetResultsOutput struct {
+	Body ResultsResponse
+}
+
+type ExportCSVInput struct {
+	ID int64 `path:"id"`
+}

@@ -148,4 +148,22 @@ func Setup(_ context.Context, deps platform.Deps) {
 		Tags:        []string{"rating"},
 		Security:    humax.BearerAuth(),
 	}, h.handleGetMonitor)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID: "get-event-results",
+		Method:      http.MethodGet,
+		Path:        "/api/events/{id}/results",
+		Summary:     "Get event results",
+		Tags:        []string{"rating"},
+		Security:    humax.BearerAuth(),
+	}, h.handleGetResults)
+
+	huma.Register(deps.API, huma.Operation{
+		OperationID: "export-event-results",
+		Method:      http.MethodGet,
+		Path:        "/api/events/{id}/results/export",
+		Summary:     "Download event results as CSV",
+		Tags:        []string{"rating"},
+		Security:    humax.BearerAuth(),
+	}, h.handleExportCSV)
 }

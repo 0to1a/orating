@@ -2,9 +2,12 @@ package rating
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -744,6 +747,204 @@ func (h *Handler) handleGetMonitor(ctx context.Context, input *GetMonitorInput) 
 	}
 
 	return &GetMonitorOutput{Body: resp}, nil
+}
+
+func (h *Handler) getResultsData(ctx context.Context, eventID int64) (*ResultsResponse, error) {
+	cycleRows, err := h.deps.Queries.RatingGetEventCycles(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	cycles := make([]CycleInfo, len(cycleRows))
+	for i, r := range cycleRows {
+		cycles[i] = CycleInfo{
+			ID:         r.ID,
+			EventID:    r.EventID,
+			Name:       r.Name,
+			OrderIndex: r.OrderIndex,
+		}
+	}
+
+	formRows, err := h.deps.Queries.RatingGetFormsForEvent(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	forms := make([]FormInfo, len(formRows))
+	for i, r := range formRows {
+		forms[i] = FormInfo{
+			ID:         r.ID,
+			EventID:    r.EventID,
+			Type:       r.Type,
+			Label:      r.Label,
+			OrderIndex: r.OrderIndex,
+		}
+	}
+
+	avgRows, err := h.deps.Queries.RatingGetResultAverages(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	avgTable := make([]CycleAverageResult, len(avgRows))
+	for i, r := range avgRows {
+		avgTable[i] = CycleAverageResult{
+			CycleID: r.CycleID,
+			FormID:  r.FormID,
+			Average: r.Average,
+		}
+	}
+
+	ftRows, err := h.deps.Queries.RatingGetResultFreeTexts(ctx, eventID)
+	if err != nil {
+		return nil, err
+	}
+	type ftKey struct{ cycleID, formID int64 }
+	ftMap := make(map[ftKey][]string)
+	ftOrder := []ftKey{}
+	for _, r := range ftRows {
+		key := ftKey{r.CycleID, r.FormID}
+		if _, exists := ftMap[key]; !exists {
+			ftOrder = append(ftOrder, key)
+		}
+		if r.ValueText.Valid {
+			ftMap[key] = append(ftMap[key], r.ValueText.String)
+		}
+	}
+	freeTexts := make([]FreeTextResult, 0, len(ftOrder))
+	for _, key := range ftOrder {
+		freeTexts = append(freeTexts, FreeTextResult{
+			CycleID: key.cycleID,
+			FormID:  key.formID,
+			Texts:   ftMap[key],
+		})
+	}
+
+	return &ResultsResponse{
+		Cycles:    cycles,
+		Forms:     forms,
+		AvgTable:  avgTable,
+		FreeTexts: freeTexts,
+	}, nil
+}
+
+func (h *Handler) handleGetResults(ctx context.Context, input *GetResultsInput) (*GetResultsOutput, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+	if eventRow.HostID != p.UserID {
+		return nil, humax.Forbidden("only the event host can view results")
+	}
+	if eventRow.Status != "ended" {
+		return nil, humax.Unprocessable("event has not ended")
+	}
+
+	data, err := h.getResultsData(ctx, input.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GetResultsOutput{Body: *data}, nil
+}
+
+func (h *Handler) handleExportCSV(ctx context.Context, input *ExportCSVInput) (*huma.StreamResponse, error) {
+	p, err := humax.RequireSelectedCompany(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	eventRow, err := h.deps.Queries.RatingGetEventByID(ctx, input.ID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, humax.NotFound("event not found")
+		}
+		return nil, err
+	}
+	if eventRow.CompanyID != p.SelectedCompanyID {
+		return nil, humax.NotFound("event not found")
+	}
+	if eventRow.HostID != p.UserID {
+		return nil, humax.Forbidden("only the event host can export results")
+	}
+	if eventRow.Status != "ended" {
+		return nil, humax.Unprocessable("event has not ended")
+	}
+
+	data, err := h.getResultsData(ctx, input.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &huma.StreamResponse{
+		Body: func(hctx huma.Context) {
+			hctx.SetHeader("Content-Type", "text/csv")
+			hctx.SetHeader("Content-Disposition", `attachment; filename="results.csv"`)
+			w := hctx.BodyWriter()
+			cw := csv.NewWriter(w)
+
+			header := make([]string, 0, 1+len(data.Forms))
+			header = append(header, "Cycle")
+			for _, f := range data.Forms {
+				header = append(header, f.Label)
+			}
+			cw.Write(header) //nolint:errcheck
+
+			avgIndex := make(map[int64]map[int64]float64)
+			for _, a := range data.AvgTable {
+				if avgIndex[a.CycleID] == nil {
+					avgIndex[a.CycleID] = make(map[int64]float64)
+				}
+				avgIndex[a.CycleID][a.FormID] = a.Average
+			}
+
+			ftIndex := make(map[int64]map[int64][]string)
+			for _, ft := range data.FreeTexts {
+				if ftIndex[ft.CycleID] == nil {
+					ftIndex[ft.CycleID] = make(map[int64][]string)
+				}
+				ftIndex[ft.CycleID][ft.FormID] = ft.Texts
+			}
+
+			for _, cycle := range data.Cycles {
+				row := make([]string, 0, 1+len(data.Forms))
+				row = append(row, cycle.Name)
+				for _, f := range data.Forms {
+					switch f.Type {
+					case "rating", "mood":
+						if byForm, ok := avgIndex[cycle.ID]; ok {
+							if avg, ok2 := byForm[f.ID]; ok2 {
+								row = append(row, fmt.Sprintf("%.2f", avg))
+								continue
+							}
+						}
+						row = append(row, "")
+					case "free_text":
+						if byForm, ok := ftIndex[cycle.ID]; ok {
+							if texts, ok2 := byForm[f.ID]; ok2 {
+								row = append(row, strings.Join(texts, " | "))
+								continue
+							}
+						}
+						row = append(row, "")
+					default:
+						row = append(row, "")
+					}
+				}
+				cw.Write(row) //nolint:errcheck
+			}
+
+			cw.Flush()
+		},
+	}, nil
 }
 
 // eventInfoFromRow maps a compiled.Event to EventInfo.
