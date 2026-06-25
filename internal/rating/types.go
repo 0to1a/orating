@@ -121,6 +121,7 @@ type SessionResponse struct {
 	CurrentStage        string     `json:"currentStage"`
 	ActiveCycleID       *int64     `json:"activeCycleId,omitempty"`
 	ActiveCycleName     string     `json:"activeCycleName,omitempty"`
+	IsParticipant       bool       `json:"isParticipant"`
 	MyResponseSubmitted bool       `json:"myResponseSubmitted"`
 	Forms               []FormInfo `json:"forms"`
 }

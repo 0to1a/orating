@@ -546,6 +546,7 @@ export type SessionResponseReadable = {
     activeCycleName?: string;
     currentStage: string;
     forms: Array<FormInfo> | null;
+    isParticipant: boolean;
     myResponseSubmitted: boolean;
 };
 
@@ -554,6 +555,7 @@ export type SessionResponseWritable = {
     activeCycleName?: string;
     currentStage: string;
     forms: Array<FormInfo> | null;
+    isParticipant: boolean;
     myResponseSubmitted: boolean;
 };
 

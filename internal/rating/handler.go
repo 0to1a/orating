@@ -576,12 +576,13 @@ func (h *Handler) handleGetSession(ctx context.Context, input *GetSessionInput) 
 		resp.Forms = forms
 	}
 
-	if eventRow.ActiveCycleID.Valid {
-		participant, err := h.deps.Queries.RatingGetParticipant(ctx, compiled.RatingGetParticipantParams{
-			EventID: input.ID,
-			UserID:  p.UserID,
-		})
-		if err == nil {
+	participant, participantErr := h.deps.Queries.RatingGetParticipant(ctx, compiled.RatingGetParticipantParams{
+		EventID: input.ID,
+		UserID:  p.UserID,
+	})
+	if participantErr == nil {
+		resp.IsParticipant = true
+		if eventRow.ActiveCycleID.Valid {
 			_, err2 := h.deps.Queries.RatingGetResponseForParticipantCycle(ctx, compiled.RatingGetResponseForParticipantCycleParams{
 				CycleID:       eventRow.ActiveCycleID.Int64,
 				ParticipantID: participant.ID,

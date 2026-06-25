@@ -10,11 +10,13 @@
 	const id = Number($page.params.id);
 
 	let event = $state<EventDetailReadable | null>(null);
-	let joined = $state(false);
 	let session = $state<SessionResponseReadable | null>(null);
 	let formValues = $state<Record<number, number | string | null>>({});
 	let submitting = $state(false);
 	let pollInterval: ReturnType<typeof setInterval> | undefined;
+
+	// Source of truth for join status comes from the backend, not local state.
+	const joined = $derived(session?.isParticipant ?? false);
 
 	async function loadEvent() {
 		const r = await getEvent({ path: { id } });
@@ -32,8 +34,7 @@
 		if (r.data) {
 			const prev = session;
 			session = r.data;
-			joined = true;
-			// Reset form values when a new waiting stage begins (stage just became waiting)
+			// Reset form values when a new waiting stage begins
 			if (r.data.currentStage === 'waiting' && prev?.currentStage !== 'waiting') {
 				formValues = {};
 			}
@@ -46,8 +47,8 @@
 			toast.error('Could not join event');
 			return;
 		}
-		joined = true;
-		poll();
+		// Poll immediately so session.isParticipant updates
+		await poll();
 		if (!pollInterval) {
 			pollInterval = setInterval(poll, 3000);
 		}
@@ -105,12 +106,8 @@
 		await loadEvent();
 		if (!event) return;
 
-		// Try to get session state — user might already be joined
-		const r = await getEventSession({ path: { id } });
-		if (r.data) {
-			session = r.data;
-			joined = true;
-		}
+		// Initial session fetch — isParticipant in response tells us if already joined
+		await poll();
 
 		// Start polling
 		pollInterval = setInterval(poll, 3000);

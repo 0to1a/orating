@@ -1252,12 +1252,16 @@
               "null"
             ]
           },
+          "isParticipant": {
+            "type": "boolean"
+          },
           "myResponseSubmitted": {
             "type": "boolean"
           }
         },
         "required": [
           "currentStage",
+          "isParticipant",
           "myResponseSubmitted",
           "forms"
         ],
