@@ -4,6 +4,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { pageTitle } from '$lib/page-title.js';
 	import {
 		getEvent,
 		activateEvent,
@@ -32,278 +33,266 @@
 			if (r.data) monitorData = r.data;
 		}, 3000);
 	});
-	onDestroy(() => {
-		if (monitorInterval !== undefined) clearInterval(monitorInterval);
-	});
+	onDestroy(() => { if (monitorInterval !== undefined) clearInterval(monitorInterval) });
 
 	let selectedCycleId = $state<number | null>(null);
+	// Track which cycles were explicitly locked by "Next cycle" — not by orderIndex comparison.
+	let completedCycleIds = $state<Set<number>>(new Set());
 
-	const activateMut = createMutation({
-		mutationFn: () => activateEvent({ path: { id } }),
-		onSuccess: () => {
-			toast.success('Event activated');
-			qc.invalidateQueries({ queryKey: ['event', id] });
-		},
-		onError: () => toast.error('Failed to activate event')
-	});
-
-	const startCycleMut = createMutation({
-		mutationFn: () => startCycle({ path: { id }, body: { cycleId: selectedCycleId! } }),
-		onSuccess: () => {
-			toast.success('Cycle started');
-			qc.invalidateQueries({ queryKey: ['event', id] });
-		},
-		onError: () => toast.error('Failed to start cycle')
-	});
-
-	const showFormMut = createMutation({
-		mutationFn: () => showForm({ path: { id } }),
-		onSuccess: () => {
-			toast.success('Form shown to participants');
-			qc.invalidateQueries({ queryKey: ['event', id] });
-		},
-		onError: () => toast.error('Failed to show form')
-	});
-
+	const activateMut  = createMutation({ mutationFn: () => activateEvent({ path: { id } }), onSuccess: () => { toast.success('Event activated'); qc.invalidateQueries({ queryKey: ['event', id] }) }, onError: () => toast.error('Failed to activate') });
+	const startCycleMut= createMutation({ mutationFn: () => startCycle({ path: { id }, body: { cycleId: selectedCycleId! } }), onSuccess: () => { toast.success('Cycle started'); qc.invalidateQueries({ queryKey: ['event', id] }) }, onError: () => toast.error('Failed to start cycle') });
+	const showFormMut  = createMutation({ mutationFn: () => showForm({ path: { id } }), onSuccess: () => { toast.success('Form opened'); qc.invalidateQueries({ queryKey: ['event', id] }) }, onError: () => toast.error('Failed to open form') });
 	const nextCycleMut = createMutation({
 		mutationFn: () => nextCycle({ path: { id }, body: { cycleId: selectedCycleId! } }),
 		onSuccess: () => {
-			toast.success('Moving to next cycle');
+			// Mark the cycle that just ended as completed before the query refreshes.
+			if (monitorData?.activeCycleId != null) {
+				completedCycleIds = new Set([...completedCycleIds, monitorData.activeCycleId]);
+			}
+			selectedCycleId = null;
+			toast.success('Next cycle');
 			qc.invalidateQueries({ queryKey: ['event', id] });
 		},
-		onError: () => toast.error('Failed to advance cycle')
+		onError: () => toast.error('Failed')
 	});
+	const endEventMut  = createMutation({ mutationFn: () => endEvent({ path: { id } }), onSuccess: () => { toast.success('Event ended'); qc.invalidateQueries({ queryKey: ['event', id] }) }, onError: () => toast.error('Failed to end') });
 
-	const endEventMut = createMutation({
-		mutationFn: () => endEvent({ path: { id } }),
-		onSuccess: () => {
-			toast.success('Event ended');
-			qc.invalidateQueries({ queryKey: ['event', id] });
-		},
-		onError: () => toast.error('Failed to end event')
+	const event  = $derived($eventQuery.data);
+
+	$effect(() => {
+		if (event?.name) pageTitle.set(event.name);
+		return () => pageTitle.set(null);
 	});
-
-	const event = $derived($eventQuery.data);
-	const cycles = $derived(event?.cycles ?? []);
+	const cycles = $derived(
+		[...(event?.cycles ?? [])].sort((a: CycleInfo, b: CycleInfo) => a.orderIndex - b.orderIndex)
+	);
 
 	const activeCycle = $derived(
 		cycles.find((c: CycleInfo) => c.id === monitorData?.activeCycleId) ?? null
 	);
-
 	const activeCycleOrderIndex = $derived(activeCycle?.orderIndex ?? -1);
+	// Any cycle that hasn't been locked and isn't currently active can still be visited.
 	const hasMoreCycles = $derived(
-		cycles.some((c: CycleInfo) => c.orderIndex > activeCycleOrderIndex)
+		cycles.some((c: CycleInfo) => !completedCycleIds.has(c.id) && c.id !== activeCycle?.id)
 	);
 
-	function statusColor(status: string) {
-		if (status === 'active') return 'var(--ok)';
-		if (status === 'ended') return 'var(--t3)';
-		return 'var(--brand)';
+	/* SVG ring math — r=72, circumference≈452 */
+	const fraction = $derived(
+		monitorData && (monitorData.participantCount ?? 0) > 0
+			? (monitorData.respondedCount ?? 0) / (monitorData.participantCount ?? 1)
+			: 0
+	);
+	const ringOffset = $derived(Math.round(452 * (1 - fraction)));
+
+	function cycleStatus(c: CycleInfo): 'done' | 'now' | 'next' {
+		// A cycle is "done" only if explicitly moved past via "Next cycle", not just because
+		// another cycle with a higher orderIndex is currently active.
+		if (completedCycleIds.has(c.id)) return 'done';
+		if (activeCycle && c.id === activeCycle.id) return 'now';
+		return 'next';
 	}
-	function statusBg(status: string) {
-		if (status === 'active') return 'var(--ok-soft)';
-		if (status === 'ended') return 'var(--s1)';
-		return 'var(--brand-soft)';
+	function cycleStatusLabel(c: CycleInfo): string {
+		const s = cycleStatus(c);
+		if (s === 'done') return 'Locked';
+		if (s === 'now' && event?.currentStage === 'form_open') return '● Scoring now';
+		if (s === 'now') return '● Waiting';
+		return 'Queued';
 	}
+
+	// Show every cycle that isn't locked and isn't currently active — order doesn't restrict choice.
+	const nextCycles = $derived(
+		cycles.filter((c: CycleInfo) => !completedCycleIds.has(c.id) && c.id !== activeCycle?.id)
+	);
 </script>
 
-<div class="flex flex-col gap-6 py-6 px-4 lg:px-6">
-	<!-- Back link -->
-	<button
-		onclick={() => goto('/app/events')}
-		class="self-start text-[13px] hover:underline"
-		style="color: var(--t3)"
-	>← Back to events</button>
+<div class="canvas">
+	<div class="wrap">
+		<button class="back" onclick={() => goto('/app/dashboard')}>← Back to events</button>
 
-	{#if $eventQuery.isLoading}
-		<div class="text-[14px]" style="color: var(--t3)">Loading event…</div>
-	{:else if !event}
-		<div class="text-[14px]" style="color: var(--danger)">Event not found.</div>
-	{:else}
-		<!-- Header -->
-		<div class="flex items-start justify-between gap-4">
-			<div>
-				<h1 class="text-2xl font-semibold tracking-tight">{event.name}</h1>
-				{#if event.description}
-					<p class="mt-1 text-[13px]" style="color: var(--t3)">{event.description}</p>
-				{/if}
-			</div>
-			<div class="flex items-center gap-2 shrink-0">
-				<span
-					class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium capitalize"
-					style="background: {statusBg(event.status)}; color: {statusColor(event.status)}"
-				>
-					<span class="size-1.5 rounded-full bg-current"></span>
-					{event.status}
-				</span>
-				{#if event.currentStage && event.currentStage !== 'idle'}
-					<span
-						class="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-medium capitalize"
-						style="background: var(--s3); color: var(--t2)"
-					>
-						{event.currentStage.replace('_', ' ')}
-					</span>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Monitor panel (active only) -->
-		{#if event.status === 'active'}
-			<div
-				class="rounded-[var(--radius-card)] border p-5 flex items-center gap-8"
-				style="background: var(--s2); border-color: var(--border-h)"
-			>
+		{#if $eventQuery.isLoading}
+			<div style="color:var(--t3);font-size:14px">Loading…</div>
+		{:else if !event}
+			<div style="color:var(--danger);font-size:14px">Event not found.</div>
+		{:else}
+			<!-- Header -->
+			<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px">
 				<div>
-					<div class="text-[11px] font-semibold uppercase tracking-wide mb-0.5" style="color: var(--t3)">Participants</div>
-					<div class="text-[28px] font-bold" style="color: var(--t1)">
-						{monitorData?.participantCount ?? '—'}
+					<div class="eyebrow">Host control room</div>
+					<h1 class="title">{event.name}</h1>
+				</div>
+				{#if event.status === 'active'}
+					<span class="pill live"><span class="dot"></span>Live</span>
+				{:else if event.status === 'ended'}
+					<span class="pill draft" style="color:var(--t3)"><span class="dot"></span>Ended</span>
+				{:else}
+					<span class="pill draft"><span class="dot"></span>Draft</span>
+				{/if}
+			</div>
+
+			<!-- Hero card: ring + legend + actions -->
+			{#if event.status === 'active'}
+				<div class="card" style="margin-bottom:18px">
+					<div class="control-hero">
+						<!-- Response ring -->
+						<div class="ring-wrap">
+							<svg width="168" height="168" viewBox="0 0 168 168">
+								<circle cx="84" cy="84" r="72" fill="none" stroke="var(--s3)" stroke-width="14"/>
+								<circle cx="84" cy="84" r="72" fill="none" stroke="var(--live)" stroke-width="14"
+									stroke-linecap="round"
+									stroke-dasharray="452"
+									stroke-dashoffset={ringOffset}
+									transform="rotate(-90 84 84)"/>
+							</svg>
+							<div class="center">
+								<div class="big">
+									{monitorData?.respondedCount ?? 0}<span style="color:var(--t3);font-size:24px">/{monitorData?.participantCount ?? 0}</span>
+								</div>
+								<div class="small">responded</div>
+							</div>
+						</div>
+
+						<!-- Legend + action buttons -->
+						<div>
+							{#if activeCycle}
+								<div style="font-size:12.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px">
+									Now scoring · {activeCycle.name}
+								</div>
+							{/if}
+							<div class="legend" style="margin-bottom:20px">
+								<div class="li">
+									<span class="swatch" style="background:var(--live)"></span>
+									<span class="lv">{monitorData?.respondedCount ?? 0}</span>
+									<span class="ll">submitted &amp; locked</span>
+								</div>
+								<div class="li">
+									<span class="swatch" style="background:var(--s3)"></span>
+									<span class="lv" style="color:var(--t2)">{(monitorData?.participantCount ?? 0) - (monitorData?.respondedCount ?? 0)}</span>
+									<span class="ll">still scoring</span>
+								</div>
+							</div>
+
+							<!-- Context-sensitive action buttons -->
+							<div style="display:flex;gap:10px;flex-wrap:wrap">
+								{#if event.currentStage === 'idle'}
+									<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+										<p style="font-size:13px;color:var(--t3)">Choose a cycle to start.</p>
+										<select
+											class="ipt"
+											style="min-width:180px;max-width:260px"
+											bind:value={selectedCycleId}
+										>
+											<option value={null} disabled selected>Select a cycle…</option>
+											{#each cycles as c}
+												<option value={c.id}>{c.name}</option>
+											{/each}
+										</select>
+										<button
+											class="btn primary"
+											disabled={selectedCycleId === null || $startCycleMut.isPending}
+											onclick={() => $startCycleMut.mutate()}
+										>{$startCycleMut.isPending ? 'Starting…' : 'Start cycle'}</button>
+									</div>
+								{:else if event.currentStage === 'waiting'}
+									<button
+										class="btn ghost"
+										disabled={$showFormMut.isPending}
+										onclick={() => $showFormMut.mutate()}
+									>{$showFormMut.isPending ? 'Opening…' : 'Show form'}</button>
+								{:else if event.currentStage === 'form_open'}
+									{#if hasMoreCycles}
+										<div style="display:flex;flex-direction:column;gap:10px">
+											<select
+												class="ipt"
+												style="min-width:180px;max-width:260px"
+												bind:value={selectedCycleId}
+											>
+												<option value={null} disabled selected>Next cycle…</option>
+												{#each nextCycles as c}
+													<option value={c.id}>{c.name}</option>
+												{/each}
+											</select>
+											<button
+												class="btn btn-live"
+												disabled={selectedCycleId === null || $nextCycleMut.isPending}
+												onclick={() => $nextCycleMut.mutate()}
+											>{$nextCycleMut.isPending ? 'Advancing…' : 'Next cycle →'}</button>
+										</div>
+									{:else}
+										<button
+											class="btn ghost"
+											disabled={$endEventMut.isPending}
+											onclick={() => $endEventMut.mutate()}
+											style="border-color:var(--danger);color:var(--danger)"
+										>{$endEventMut.isPending ? 'Ending…' : 'End event'}</button>
+									{/if}
+								{/if}
+							</div>
+						</div>
 					</div>
 				</div>
-				<div style="width: 1px; height: 40px; background: var(--border-h)"></div>
-				<div>
-					<div class="text-[11px] font-semibold uppercase tracking-wide mb-0.5" style="color: var(--t3)">Responded</div>
-					<div class="text-[28px] font-bold" style="color: var(--t1)">
-						{monitorData?.respondedCount ?? '—'}
-					</div>
-				</div>
-				{#if activeCycle}
-					<div style="width: 1px; height: 40px; background: var(--border-h)"></div>
-					<div>
-						<div class="text-[11px] font-semibold uppercase tracking-wide mb-0.5" style="color: var(--t3)">Active Cycle</div>
-						<div class="text-[16px] font-semibold" style="color: var(--t1)">{activeCycle.name}</div>
-					</div>
-				{/if}
-			</div>
-		{/if}
 
-		<!-- Action section -->
-		<div
-			class="rounded-[var(--radius-card)] border p-6 flex flex-col gap-4"
-			style="background: var(--s2); border-color: var(--border-h)"
-		>
-			<h2 class="text-[15px] font-semibold">Host Controls</h2>
-
-			{#if event.status === 'draft'}
-				<div class="flex flex-col gap-2">
-					<p class="text-[13px]" style="color: var(--t3)">Activate the event so participants can join.</p>
+			{:else if event.status === 'draft'}
+				<!-- Draft: activate card -->
+				<div class="card" style="margin-bottom:18px">
+					<div class="card-h" style="margin-bottom:12px">Activate event</div>
+					<p style="font-size:13px;color:var(--t3);margin-bottom:18px">Open the event so raters can join and you can begin scoring.</p>
 					<button
-						onclick={() => $activateMut.mutate()}
+						class="btn primary"
 						disabled={$activateMut.isPending}
-						class="self-start rounded-[9px] bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						{$activateMut.isPending ? 'Activating…' : 'Activate Event'}
-					</button>
+						onclick={() => $activateMut.mutate()}
+					>{$activateMut.isPending ? 'Activating…' : 'Activate event'}</button>
 				</div>
-			{:else if event.status === 'active' && event.currentStage === 'idle'}
-				<div class="flex flex-col gap-3">
-					<p class="text-[13px]" style="color: var(--t3)">Choose a cycle to start.</p>
-					<select
-						bind:value={selectedCycleId}
-						class="rounded-[9px] border px-3 py-2.5 text-[13.5px] outline-none transition-shadow self-start min-w-[200px]"
-						style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
-					>
-						<option value={null} disabled selected>Select a cycle…</option>
-						{#each cycles as c}
-							<option value={c.id}>{c.name}</option>
-						{/each}
-					</select>
-					<button
-						onclick={() => $startCycleMut.mutate()}
-						disabled={selectedCycleId === null || $startCycleMut.isPending}
-						class="self-start rounded-[9px] bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						{$startCycleMut.isPending ? 'Starting…' : 'Start Cycle'}
-					</button>
-				</div>
-			{:else if event.status === 'active' && event.currentStage === 'waiting'}
-				<div class="flex flex-col gap-2">
-					<p class="text-[13px]" style="color: var(--t3)">Open the rating form to participants.</p>
-					<button
-						onclick={() => $showFormMut.mutate()}
-						disabled={$showFormMut.isPending}
-						class="self-start rounded-[9px] bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						{$showFormMut.isPending ? 'Opening…' : 'Show Form'}
-					</button>
-				</div>
-			{:else if event.status === 'active' && event.currentStage === 'form_open'}
-				<div class="flex flex-col gap-3">
-					{#if hasMoreCycles}
-						<p class="text-[13px]" style="color: var(--t3)">Advance to the next cycle.</p>
-						<select
-							bind:value={selectedCycleId}
-							class="rounded-[9px] border px-3 py-2.5 text-[13.5px] outline-none transition-shadow self-start min-w-[200px]"
-							style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
-						>
-							<option value={null} disabled selected>Select next cycle…</option>
-							{#each cycles.filter((c: CycleInfo) => c.orderIndex > activeCycleOrderIndex) as c}
-								<option value={c.id}>{c.name}</option>
-							{/each}
-						</select>
-						<button
-							onclick={() => $nextCycleMut.mutate()}
-							disabled={selectedCycleId === null || $nextCycleMut.isPending}
-							class="self-start rounded-[9px] bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-						>
-							{$nextCycleMut.isPending ? 'Advancing…' : 'Next Cycle'}
-						</button>
-					{:else}
-						<p class="text-[13px]" style="color: var(--t3)">All cycles complete. End the event to lock in results.</p>
-						<button
-							onclick={() => $endEventMut.mutate()}
-							disabled={$endEventMut.isPending}
-							class="self-start rounded-[9px] px-5 py-2.5 text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-							style="background: var(--danger-soft); color: var(--danger)"
-						>
-							{$endEventMut.isPending ? 'Ending…' : 'End Event'}
-						</button>
-					{/if}
-				</div>
+
 			{:else if event.status === 'ended'}
-				<div class="flex flex-col gap-2">
-					<p class="text-[13px]" style="color: var(--t3)">This event has ended. View the final results.</p>
+				<!-- Ended: results card -->
+				<div class="card" style="margin-bottom:18px">
+					<div class="card-h" style="margin-bottom:12px">Event complete</div>
+					<p style="font-size:13px;color:var(--t3);margin-bottom:18px">All cycles locked. View the final tally.</p>
 					<button
+						class="btn primary"
 						onclick={() => goto(`/app/events/${id}/results`)}
-						class="self-start rounded-[9px] bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
-					>
-						View Results
-					</button>
+					>View results →</button>
 				</div>
 			{/if}
-		</div>
 
-		<!-- Cycles list -->
-		<div
-			class="rounded-[var(--radius-card)] border overflow-hidden"
-			style="background: var(--s2); border-color: var(--border-h)"
-		>
-			<div class="px-5 py-4 border-b" style="border-color: var(--border-h)">
-				<h2 class="text-[15px] font-semibold">Cycles</h2>
-			</div>
-			{#if cycles.length === 0}
-				<div class="px-5 py-6 text-[13px]" style="color: var(--t3)">No cycles defined.</div>
-			{:else}
-				<div>
-					{#each [...cycles].sort((a: CycleInfo, b: CycleInfo) => a.orderIndex - b.orderIndex) as cycle, i}
-						<div
-							class="flex items-center justify-between px-5 py-3.5"
-							style="border-bottom: {i < cycles.length - 1 ? '1px solid var(--border-h)' : 'none'};
-								   background: {cycle.id === monitorData?.activeCycleId ? 'var(--brand-soft)' : 'transparent'}"
-						>
-							<div class="flex items-center gap-3">
-								<span
-									class="size-6 rounded-full grid place-items-center text-[11px] font-bold shrink-0"
-									style="background: {cycle.id === monitorData?.activeCycleId ? 'var(--brand)' : 'var(--s3)'}; color: {cycle.id === monitorData?.activeCycleId ? 'white' : 'var(--t3)'}"
-								>{i + 1}</span>
-								<span class="text-[14px] font-medium" style="color: {cycle.id === monitorData?.activeCycleId ? 'var(--brand)' : 'var(--t1)'}">{cycle.name}</span>
+			<!-- Cycle rail -->
+			{#if cycles.length > 0}
+				<div style="font-size:12.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin:0 2px 10px">Run of show</div>
+				<div class="rail" style="margin-bottom:22px">
+					{#each cycles as c, i}
+						{@const status = cycleStatus(c)}
+						<div class="rail-step {status}">
+							<div class="si">
+								<div class="badge">
+									{#if status === 'done'}✓{:else}{i + 1}{/if}
+								</div>
+								<div class="nm">{c.name}</div>
 							</div>
-							{#if cycle.id === monitorData?.activeCycleId}
-								<span class="text-[12px] font-medium" style="color: var(--brand)">Active</span>
-							{/if}
+							<div class="st">{cycleStatusLabel(c)}</div>
 						</div>
 					{/each}
 				</div>
+
+				<!-- Rater count card -->
+				{#if event.status === 'active' && monitorData}
+					<div class="card">
+						<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+							<div class="card-h">Participation</div>
+							<span style="font-size:12px;color:var(--t3)">status only · scores stay hidden</span>
+						</div>
+						<div style="display:flex;gap:32px">
+							<div>
+								<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:4px">Joined</div>
+								<div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--t1)">{monitorData.participantCount ?? 0}</div>
+							</div>
+							<div>
+								<div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:4px">Responded</div>
+								<div style="font-family:var(--display);font-size:28px;font-weight:700;color:var(--live)">{monitorData.respondedCount ?? 0}</div>
+							</div>
+						</div>
+					</div>
+				{/if}
 			{/if}
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>

@@ -21,6 +21,9 @@ frontend/.build-stamp
 .env
 .env.local
 
+# Firebase service account keys
+*-firebase-adminsdk-*.json
+
 # Nested repos (keep sample/ read-only reference, don't commit its contents)
 sample/
 
@@ -33,3 +36,4 @@ e2e/playwright/.auth/
 
 # macOS
 .DS_Store
+.osgrep

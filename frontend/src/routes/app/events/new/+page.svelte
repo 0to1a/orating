@@ -7,7 +7,7 @@
 	let name = $state('');
 	let description = $state('');
 	let visibility = $state<'public' | 'private'>('public');
-	let cycles = $state<{ name: string }[]>([{ name: '' }]);
+	let cycles = $state<{ name: string }[]>([{ name: '' }, { name: '' }]);
 	let forms = $state<{ type: string; label: string }[]>([{ type: 'rating', label: '' }]);
 	let memberEmails = $state<string[]>(['']);
 
@@ -20,10 +20,7 @@
 					visibility,
 					cycles: cycles.filter((c) => c.name.trim()).map((c) => ({ name: c.name })),
 					forms: forms.filter((f) => f.label.trim()).map((f) => ({ type: f.type, label: f.label })),
-					members:
-						visibility === 'private'
-							? memberEmails.filter((e) => e.trim())
-							: null
+					members: visibility === 'private' ? memberEmails.filter((e) => e.trim()) : null
 				}
 			}),
 		onSuccess: (r) => {
@@ -33,240 +30,115 @@
 		onError: () => toast.error('Failed to create event')
 	});
 
-	function addCycle() {
-		cycles = [...cycles, { name: '' }];
-	}
-	function removeCycle(i: number) {
-		if (cycles.length > 1) cycles = cycles.filter((_, idx) => idx !== i);
-	}
-
-	function addForm() {
-		forms = [...forms, { type: 'rating', label: '' }];
-	}
-	function removeForm(i: number) {
-		if (forms.length > 1) forms = forms.filter((_, idx) => idx !== i);
-	}
-
-	function addEmail() {
-		memberEmails = [...memberEmails, ''];
-	}
-	function removeEmail(i: number) {
-		if (memberEmails.length > 1) memberEmails = memberEmails.filter((_, idx) => idx !== i);
-	}
-
-	const inputStyle =
-		'background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit';
-	const inputClass =
-		'w-full rounded-[9px] border px-3 py-2.5 text-[13.5px] outline-none transition-shadow';
-	const labelClass = 'mb-1.5 block text-[12.5px] font-medium';
-
-	function focusStyle(e: FocusEvent) {
-		(e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 3px var(--brand-soft)';
-	}
-	function blurStyle(e: FocusEvent) {
-		(e.currentTarget as HTMLElement).style.boxShadow = '';
-	}
+	function addCycle() { cycles = [...cycles, { name: '' }] }
+	function removeCycle(i: number) { if (cycles.length > 1) cycles = cycles.filter((_, idx) => idx !== i) }
+	function addForm() { forms = [...forms, { type: 'rating', label: '' }] }
+	function removeForm(i: number) { if (forms.length > 1) forms = forms.filter((_, idx) => idx !== i) }
+	function addEmail() { memberEmails = [...memberEmails, ''] }
+	function removeEmail(i: number) { if (memberEmails.length > 1) memberEmails = memberEmails.filter((_, idx) => idx !== i) }
 </script>
 
-<div class="mx-auto max-w-2xl py-8 px-4 lg:px-0 flex flex-col gap-8">
-	<!-- Header -->
-	<div>
-		<button
-			onclick={() => goto('/app/events')}
-			class="mb-3 text-[13px] hover:underline"
-			style="color: var(--t3)"
-		>← Back to events</button>
-		<h1 class="text-2xl font-semibold tracking-tight">Create Event</h1>
-	</div>
+<div class="canvas">
+	<div class="wrap narrow">
+		<button class="back" onclick={() => goto('/app/dashboard')}>← Back to events</button>
 
-	<!-- Section 1: Event Info -->
-	<section
-		class="rounded-[var(--radius-card)] border p-6 flex flex-col gap-4"
-		style="background: var(--s2); border-color: var(--border-h)"
-	>
-		<h2 class="text-[15px] font-semibold">Event Info</h2>
+		<div class="eyebrow">New event</div>
+		<h1 class="title">Set up your panel</h1>
+		<p class="sub" style="margin-bottom:28px">Define the rounds and the questions raters will score.</p>
 
-		<div>
-			<label class="{labelClass}" style="color: var(--t2)" for="event-name">Name *</label>
-			<input
-				id="event-name"
-				bind:value={name}
-				placeholder="e.g. Q2 Retrospective"
-				class={inputClass}
-				style={inputStyle}
-				onfocus={focusStyle}
-				onblur={blurStyle}
-			/>
-		</div>
+		<!-- Event info -->
+		<div class="card" style="margin-bottom:18px">
+			<div class="card-h" style="margin-bottom:18px">Event info</div>
 
-		<div>
-			<label class="{labelClass}" style="color: var(--t2)" for="event-desc">Description</label>
-			<textarea
-				id="event-desc"
-				bind:value={description}
-				placeholder="Optional description"
-				rows={3}
-				class="{inputClass} resize-none"
-				style={inputStyle}
-				onfocus={focusStyle}
-				onblur={blurStyle}
-			></textarea>
-		</div>
-
-		<div>
-			<span class="{labelClass}" style="color: var(--t2)">Visibility</span>
-			<div class="flex gap-2 mt-1">
-				<button
-					onclick={() => (visibility = 'public')}
-					class="rounded-[9px] border px-4 py-2 text-[13px] font-medium transition-all"
-					style={visibility === 'public'
-						? 'background: var(--brand-soft); border-color: var(--brand); color: var(--brand)'
-						: 'background: var(--s3); border-color: var(--border-h2); color: var(--t2)'}
-				>Public</button>
-				<button
-					onclick={() => (visibility = 'private')}
-					class="rounded-[9px] border px-4 py-2 text-[13px] font-medium transition-all"
-					style={visibility === 'private'
-						? 'background: var(--brand-soft); border-color: var(--brand); color: var(--brand)'
-						: 'background: var(--s3); border-color: var(--border-h2); color: var(--t2)'}
-				>Private</button>
+			<div style="margin-bottom:16px">
+				<label class="fld" for="ev-name">Name</label>
+				<input id="ev-name" class="ipt" bind:value={name} placeholder="e.g. Pitch Night — Cohort 12" />
 			</div>
-		</div>
-	</section>
 
-	<!-- Section 2: Cycles -->
-	<section
-		class="rounded-[var(--radius-card)] border p-6 flex flex-col gap-4"
-		style="background: var(--s2); border-color: var(--border-h)"
-	>
-		<h2 class="text-[15px] font-semibold">Cycles</h2>
+			<div style="margin-bottom:16px">
+				<label class="fld" for="ev-desc">Description</label>
+				<textarea id="ev-desc" class="ipt" bind:value={description} placeholder="What are raters evaluating?"></textarea>
+			</div>
 
-		<div class="flex flex-col gap-2">
-			{#each cycles as cycle, i}
-				<div class="flex items-center gap-2">
-					<input
-						bind:value={cycle.name}
-						placeholder="Cycle name, e.g. Round 1"
-						class="{inputClass} flex-1"
-						style={inputStyle}
-						onfocus={focusStyle}
-						onblur={blurStyle}
-					/>
-					<button
-						onclick={() => removeCycle(i)}
-						disabled={cycles.length === 1}
-						class="size-9 grid place-items-center rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-						style="border-color: var(--border-h2); color: var(--t3)"
-						aria-label="Remove cycle"
-					>×</button>
-				</div>
-			{/each}
-		</div>
-
-		<button
-			onclick={addCycle}
-			class="self-start rounded-[9px] border px-3 py-1.5 text-[13px] transition-colors hover:bg-[var(--s3)]"
-			style="border-color: var(--border-h2); color: var(--t2)"
-		>+ Add Cycle</button>
-	</section>
-
-	<!-- Section 3: Forms -->
-	<section
-		class="rounded-[var(--radius-card)] border p-6 flex flex-col gap-4"
-		style="background: var(--s2); border-color: var(--border-h)"
-	>
-		<h2 class="text-[15px] font-semibold">Forms</h2>
-
-		<div class="flex flex-col gap-2">
-			{#each forms as form, i}
-				<div class="flex items-center gap-2">
-					<select
-						bind:value={form.type}
-						class="rounded-[9px] border px-3 py-2.5 text-[13px] outline-none transition-shadow shrink-0"
-						style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
-						onfocus={focusStyle}
-						onblur={blurStyle}
-					>
-						<option value="rating">Rating</option>
-						<option value="mood">Mood</option>
-						<option value="free_text">Free Text</option>
-					</select>
-					<input
-						bind:value={form.label}
-						placeholder="Form label, e.g. Overall score"
-						class="{inputClass} flex-1"
-						style={inputStyle}
-						onfocus={focusStyle}
-						onblur={blurStyle}
-					/>
-					<button
-						onclick={() => removeForm(i)}
-						disabled={forms.length === 1}
-						class="size-9 grid place-items-center rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-						style="border-color: var(--border-h2); color: var(--t3)"
-						aria-label="Remove form"
-					>×</button>
-				</div>
-			{/each}
-		</div>
-
-		<button
-			onclick={addForm}
-			class="self-start rounded-[9px] border px-3 py-1.5 text-[13px] transition-colors hover:bg-[var(--s3)]"
-			style="border-color: var(--border-h2); color: var(--t2)"
-		>+ Add Form</button>
-	</section>
-
-	<!-- Section 4: Members (private only) -->
-	{#if visibility === 'private'}
-		<section
-			class="rounded-[var(--radius-card)] border p-6 flex flex-col gap-4"
-			style="background: var(--s2); border-color: var(--border-h)"
-		>
 			<div>
-				<h2 class="text-[15px] font-semibold">Members</h2>
-				<p class="text-[12.5px] mt-0.5" style="color: var(--t3)">Invite specific people to this private event.</p>
+				<div class="fld" role="group" aria-label="Who can join">Who can join</div>
+				<div class="seg">
+					<button class:on={visibility === 'public'} onclick={() => (visibility = 'public')}>Public</button>
+					<button class:on={visibility === 'private'} onclick={() => (visibility = 'private')}>Invite only</button>
+				</div>
+				<p style="font-size:12px;color:var(--t3);margin-top:8px">
+					{visibility === 'public'
+						? "Public events show on everyone's dashboard."
+						: 'Invite-only stays with the people you add.'}
+				</p>
 			</div>
+		</div>
 
-			<div class="flex flex-col gap-2">
+		<!-- Cycles -->
+		<div class="card" style="margin-bottom:18px">
+			<div class="card-h" style="margin-bottom:8px">Cycles</div>
+			<p style="font-size:12.5px;color:var(--t3);margin-bottom:18px">One per thing being judged — a team, a sample, a pitch.</p>
+
+			{#each cycles as cycle, i}
+				<div class="row-b">
+					<div class="num">{i + 1}</div>
+					<input class="ipt" bind:value={cycle.name} placeholder="Cycle name…" />
+					<button class="x" onclick={() => removeCycle(i)} aria-label="Remove cycle">×</button>
+				</div>
+			{/each}
+			<button class="add-row" onclick={addCycle}>+ Add cycle</button>
+		</div>
+
+		<!-- Scoring form -->
+		<div class="card" style="margin-bottom:24px">
+			<div class="card-h" style="margin-bottom:8px">Scoring form</div>
+			<p style="font-size:12.5px;color:var(--t3);margin-bottom:18px">The same questions apply to every cycle.</p>
+
+			{#each forms as form, i}
+				<div class="row-b">
+					<select class="ipt" style="max-width:148px;flex-shrink:0" bind:value={form.type}>
+						<option value="rating">Rating 1–5</option>
+						<option value="mood">Mood 1–4</option>
+						<option value="free_text">Free text</option>
+					</select>
+					<input class="ipt" bind:value={form.label} placeholder="Question label…" />
+					<button class="x" onclick={() => removeForm(i)} aria-label="Remove question">×</button>
+				</div>
+			{/each}
+			<button class="add-row" onclick={addForm}>+ Add question</button>
+		</div>
+
+		<!-- Members (private only) -->
+		{#if visibility === 'private'}
+			<div class="card" style="margin-bottom:24px">
+				<div class="card-h" style="margin-bottom:8px">Invite members</div>
+				<p style="font-size:12.5px;color:var(--t3);margin-bottom:18px">Add email addresses of people who can join this event.</p>
+
 				{#each memberEmails as _, i}
-					<div class="flex items-center gap-2">
+					<div class="row-b">
 						<input
-							bind:value={memberEmails[i]}
+							class="ipt"
 							type="email"
+							bind:value={memberEmails[i]}
 							placeholder="email@example.com"
-							class="{inputClass} flex-1"
-							style={inputStyle}
-							onfocus={focusStyle}
-							onblur={blurStyle}
 						/>
-						<button
-							onclick={() => removeEmail(i)}
-							disabled={memberEmails.length === 1}
-							class="size-9 grid place-items-center rounded-lg border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-							style="border-color: var(--border-h2); color: var(--t3)"
-							aria-label="Remove email"
-						>×</button>
+						<button class="x" onclick={() => removeEmail(i)} aria-label="Remove email">×</button>
 					</div>
 				{/each}
+				<button class="add-row" onclick={addEmail}>+ Add email</button>
 			</div>
+		{/if}
 
+		<!-- Actions -->
+		<div style="display:flex;justify-content:flex-end;gap:12px;padding-bottom:40px">
+			<button class="btn ghost" onclick={() => goto('/app/dashboard')}>Cancel</button>
 			<button
-				onclick={addEmail}
-				class="self-start rounded-[9px] border px-3 py-1.5 text-[13px] transition-colors hover:bg-[var(--s3)]"
-				style="border-color: var(--border-h2); color: var(--t2)"
-			>+ Add Email</button>
-		</section>
-	{/if}
-
-	<!-- Submit -->
-	<div class="flex justify-end pb-6">
-		<button
-			onclick={() => $createMut.mutate()}
-			disabled={!name.trim() || $createMut.isPending}
-			class="rounded-[9px] bg-primary px-6 py-2.5 text-[14px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-		>
-			{$createMut.isPending ? 'Creating…' : 'Create Event'}
-		</button>
+				class="btn primary lg"
+				disabled={!name.trim() || $createMut.isPending}
+				onclick={() => $createMut.mutate()}
+			>
+				{$createMut.isPending ? 'Creating…' : 'Create event'}
+			</button>
+		</div>
 	</div>
 </div>

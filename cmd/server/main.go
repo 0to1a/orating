@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -124,6 +125,16 @@ func main() {
 	company.Setup(bgCtx, deps)
 	featureflag.Setup(bgCtx, deps)
 	rating.Setup(bgCtx, deps)
+
+	// Public frontend config (safe to expose — no secrets).
+	r.Get("/api/config", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"firebaseApiKey":     cfg.FirebaseAPIKey,
+			"firebaseAuthDomain": cfg.FirebaseAuthDomain,
+			"firebaseProjectId":  cfg.FirebaseProjectID,
+		})
+	})
 
 	// Health check.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {

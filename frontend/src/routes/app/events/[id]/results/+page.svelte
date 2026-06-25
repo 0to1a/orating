@@ -4,7 +4,6 @@
 	import { goto } from '$app/navigation';
 	import { getEventResults } from '$lib/api-client.js';
 	import { getToken } from '$lib/auth.js';
-	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import type { CycleInfo, FormInfo, CycleAverageResult, FreeTextResult } from '$lib/api/types.gen.js';
 
 	const id = Number($page.params.id);
@@ -17,15 +16,13 @@
 	const results = $derived($resultsQuery.data);
 
 	const sortedCycles = $derived(
-		[...(results?.cycles ?? [])].sort(
-			(a: CycleInfo, b: CycleInfo) => a.orderIndex - b.orderIndex
-		)
+		[...(results?.cycles ?? [])].sort((a: CycleInfo, b: CycleInfo) => a.orderIndex - b.orderIndex)
 	);
 
 	const ratingForms = $derived(
-		(results?.forms ?? []).filter(
-			(f: FormInfo) => f.type === 'rating' || f.type === 'mood'
-		).sort((a: FormInfo, b: FormInfo) => a.orderIndex - b.orderIndex)
+		(results?.forms ?? [])
+			.filter((f: FormInfo) => f.type === 'rating' || f.type === 'mood')
+			.sort((a: FormInfo, b: FormInfo) => a.orderIndex - b.orderIndex)
 	);
 
 	const freeTextForms = $derived(
@@ -36,8 +33,34 @@
 		const entry = (results?.avgTable ?? []).find(
 			(r: CycleAverageResult) => r.cycleId === cycleId && r.formId === formId
 		);
-		if (!entry) return '—';
-		return entry.average.toFixed(2);
+		return entry ? entry.average.toFixed(2) : '—';
+	}
+
+	function getOverallAvg(cycleId: number): number {
+		const avgs = ratingForms
+			.map((f: FormInfo) => {
+				const entry = (results?.avgTable ?? []).find(
+					(r: CycleAverageResult) => r.cycleId === cycleId && r.formId === f.id
+				);
+				return entry ? entry.average : null;
+			})
+			.filter((v: number | null): v is number => v !== null);
+		if (avgs.length === 0) return 0;
+		return avgs.reduce((a: number, b: number) => a + b, 0) / avgs.length;
+	}
+
+	/* Sort cycles by overall avg descending for ranking */
+	const rankedCycles = $derived(
+		[...sortedCycles].sort((a: CycleInfo, b: CycleInfo) => getOverallAvg(b.id) - getOverallAvg(a.id))
+	);
+
+	const maxAvg = $derived(
+		rankedCycles.length > 0 ? Math.max(...rankedCycles.map((c: CycleInfo) => getOverallAvg(c.id))) : 1
+	);
+
+	function scoreBarWidth(cycleId: number): string {
+		const max = maxAvg || 1;
+		return `${Math.round((getOverallAvg(cycleId) / max) * 100)}%`;
 	}
 
 	function getFreeTexts(cycleId: number, formId: number): string[] {
@@ -65,116 +88,89 @@
 	}
 </script>
 
-<div class="flex flex-col gap-6 py-6 px-4 lg:px-6">
-	<!-- Back + header -->
-	<div class="flex items-center justify-between gap-4">
-		<div>
-			<button
-				onclick={() => goto(`/app/events/${id}/control`)}
-				class="mb-2 block text-[13px] hover:underline"
-				style="color: var(--t3)"
-			>← Back to control panel</button>
-			<h1 class="text-2xl font-semibold tracking-tight">Results</h1>
-		</div>
-		<button
-			onclick={downloadCSV}
-			class="rounded-[9px] border px-4 py-2 text-[13px] font-medium transition-colors hover:bg-[var(--s3)]"
-			style="background: none; border-color: var(--border-h2); color: var(--t1)"
-		>
-			Download CSV
-		</button>
-	</div>
+<div class="canvas">
+	<div class="wrap">
+		<button class="back" onclick={() => goto(`/app/events/${id}/control`)}>← Back to control</button>
 
-	{#if $resultsQuery.isLoading}
-		<Skeleton class="h-40 w-full" />
-	{:else if !results}
-		<div class="text-[14px]" style="color: var(--danger)">Results not available.</div>
-	{:else}
-		<!-- Averages table (rating + mood forms only) -->
-		{#if ratingForms.length > 0 && sortedCycles.length > 0}
-			<div
-				class="rounded-[var(--radius-card)] border overflow-hidden"
-				style="border-color: var(--border-h)"
-			>
-				<div class="px-5 py-4 border-b" style="background: var(--s2); border-color: var(--border-h)">
-					<h2 class="text-[15px] font-semibold">Averages</h2>
-				</div>
-				<div class="overflow-x-auto">
-					<table class="w-full border-collapse" style="background: var(--s2)">
+		<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px">
+			<div>
+				<div class="eyebrow">Host only · final tally</div>
+				<h1 class="title">Results</h1>
+			</div>
+			<button class="btn ghost" onclick={downloadCSV}>
+				<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+				Export CSV
+			</button>
+		</div>
+		<p class="sub" style="margin-bottom:24px">Averages from raters who responded. Cycles ranked by overall score.</p>
+
+		{#if $resultsQuery.isLoading}
+			<div style="color:var(--t3);font-size:14px;padding:24px 0">Loading results…</div>
+		{:else if !results}
+			<div style="color:var(--danger);font-size:14px">Results not available.</div>
+		{:else}
+			<!-- Ranked averages table -->
+			{#if ratingForms.length > 0 && rankedCycles.length > 0}
+				<div class="card" style="padding:6px 6px 8px;margin-bottom:18px">
+					<table class="res">
 						<thead>
 							<tr>
-								<th
-									class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.05em]"
-									style="background: var(--s1); color: var(--t3); border-bottom: 1px solid var(--border-h)"
-								>Cycle</th>
+								<th style="width:46px">#</th>
+								<th>Cycle</th>
 								{#each ratingForms as form}
-									<th
-										class="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.05em]"
-										style="background: var(--s1); color: var(--t3); border-bottom: 1px solid var(--border-h)"
-									>{form.label}</th>
+									<th class="c">{form.label}</th>
 								{/each}
+								<th>Score</th>
 							</tr>
 						</thead>
 						<tbody>
-							{#each sortedCycles as cycle, i}
-								<tr>
-									<td
-										class="px-5 py-3.5 text-[14px] font-medium"
-										style="border-bottom: {i < sortedCycles.length - 1 ? '1px solid var(--border-h)' : 'none'}; color: var(--t1)"
-									>{cycle.name}</td>
+							{#each rankedCycles as cycle, i}
+								<tr class:top={i === 0}>
+									<td><span class="rank-badge">{i + 1}</span></td>
+									<td style="font-weight:{i===0?'700':'400'}">{cycle.name}</td>
 									{#each ratingForms as form}
-										<td
-											class="px-5 py-3.5 text-[14px] mono"
-											style="border-bottom: {i < sortedCycles.length - 1 ? '1px solid var(--border-h)' : 'none'}; color: var(--t2)"
-										>{getAvg(cycle.id, form.id)}</td>
+										<td class="num-c c">{getAvg(cycle.id, form.id)}</td>
 									{/each}
+									<td>
+										<div class="score-bar">
+											<i style="width:{scoreBarWidth(cycle.id)}"></i>
+										</div>
+									</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
 				</div>
-			</div>
-		{/if}
+			{/if}
 
-		<!-- Free text responses -->
-		{#if freeTextForms.length > 0}
-			<div class="flex flex-col gap-4">
-				<h2 class="text-[15px] font-semibold">Free Text Responses</h2>
-				{#each sortedCycles as cycle}
-					{#each freeTextForms as form}
-						{@const texts = getFreeTexts(cycle.id, form.id)}
-						{#if texts.length > 0}
-							<div
-								class="rounded-[var(--radius-card)] border p-5"
-								style="background: var(--s2); border-color: var(--border-h)"
-							>
-								<div class="flex items-center gap-2 mb-3">
-									<span class="text-[13px] font-semibold" style="color: var(--t1)">{cycle.name}</span>
-									<span class="text-[12px]" style="color: var(--t3)">—</span>
-									<span class="text-[13px]" style="color: var(--t2)">{form.label}</span>
-								</div>
-								<ul class="flex flex-col gap-1.5">
+			<!-- Free text responses -->
+			{#if freeTextForms.length > 0}
+				{#each freeTextForms as form}
+					<div class="card" style="margin-bottom:18px">
+						<div class="card-h" style="margin-bottom:16px">
+							{form.label}
+							<span style="font-size:12px;color:var(--t3);font-weight:400;margin-left:8px">(anonymous)</span>
+						</div>
+						{#each sortedCycles as cycle}
+							{@const texts = getFreeTexts(cycle.id, form.id)}
+							{#if texts.length > 0}
+								<div style="margin-bottom:16px">
+									<div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:10px">{cycle.name}</div>
 									{#each texts as text}
-										<li class="flex items-start gap-2 text-[13.5px]" style="color: var(--t1)">
-											<span class="mt-1.5 size-1.5 rounded-full shrink-0" style="background: var(--t3)"></span>
-											{text}
-										</li>
+										<div class="quote">{text}</div>
 									{/each}
-								</ul>
-							</div>
-						{/if}
-					{/each}
+								</div>
+							{/if}
+						{/each}
+					</div>
 				{/each}
-			</div>
-		{/if}
+			{/if}
 
-		{#if ratingForms.length === 0 && freeTextForms.length === 0}
-			<div
-				class="rounded-[var(--radius-card)] border py-12 text-center text-[13px]"
-				style="background: var(--s2); border-color: var(--border-h); color: var(--t3)"
-			>
-				No results to display yet.
-			</div>
+			{#if ratingForms.length === 0 && freeTextForms.length === 0}
+				<div class="card" style="padding:48px;text-align:center;color:var(--t3)">
+					No results to display yet.
+				</div>
+			{/if}
 		{/if}
-	{/if}
+	</div>
 </div>

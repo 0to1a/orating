@@ -6,8 +6,10 @@
 	import { createQuery } from '@tanstack/svelte-query';
 	import { listCompanies } from '$lib/api-client.js';
 	import AppSidebar from '$lib/components/layout/app-sidebar.svelte';
+	import ParticleBackground from '$lib/components/ui/particle-background.svelte';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import { pageTitle as pageTitleStore } from '$lib/page-title.js';
 
 	let { children } = $props();
 
@@ -26,16 +28,19 @@
 		$companiesQuery.data?.find((c) => c.id === profile?.selectedCompanyId) ?? null
 	);
 
-	const pageTitle = $derived.by(() => {
+	const urlTitle = $derived.by(() => {
 		const seg = $page.url.pathname.split('/').filter(Boolean).at(-1) ?? '';
 		return seg.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 	});
+
+	const pageTitle = $derived($pageTitleStore ?? urlTitle);
 </script>
 
 <svelte:head>
 	<title>App | {pageTitle}</title>
 </svelte:head>
 
+<ParticleBackground />
 <Sidebar.Provider
 	style="--sidebar-width: calc(var(--spacing) * 72); --header-height: calc(var(--spacing) * 12);"
 >

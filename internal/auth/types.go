@@ -42,3 +42,11 @@ type LoginVerifyOutput struct {
 type AuthMeOutput struct {
 	Body AuthProfile
 }
+
+type GoogleLoginRequest struct {
+	IDToken string `json:"idToken"`
+}
+
+type GoogleLoginInput struct {
+	Body GoogleLoginRequest
+}

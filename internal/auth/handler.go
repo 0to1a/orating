@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	firebaseauth "firebase.google.com/go/v4/auth"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -29,11 +30,12 @@ const (
 )
 
 type Handler struct {
-	queries *compiled.Queries
-	mailer  mailer.Mailer
-	mw      *Middleware // for cache invalidation on logout
-	cache   *cache.Cache[string, *authctx.Principal]
-	tmpl    *template.Template
+	queries      *compiled.Queries
+	mailer       mailer.Mailer
+	mw           *Middleware // for cache invalidation on logout
+	cache        *cache.Cache[string, *authctx.Principal]
+	tmpl         *template.Template
+	firebaseAuth *firebaseauth.Client
 }
 
 // ===== handlers =====
@@ -153,6 +155,76 @@ func (h *Handler) handleMe(ctx context.Context, _ *struct{}) (*AuthMeOutput, err
 		Email:             p.Email,
 		Name:              p.Name,
 		SelectedCompanyID: p.SelectedCompanyID,
+	}}, nil
+}
+
+func (h *Handler) handleGoogleLogin(ctx context.Context, input *GoogleLoginInput) (*LoginVerifyOutput, error) {
+	if h.firebaseAuth == nil {
+		return nil, humax.Unprocessable("google login is not configured")
+	}
+
+	tok, err := h.firebaseAuth.VerifyIDToken(ctx, input.Body.IDToken)
+	if err != nil {
+		return nil, humax.BadRequest("invalid google token")
+	}
+
+	email, _ := tok.Claims["email"].(string)
+	name, _ := tok.Claims["name"].(string)
+	if email == "" {
+		return nil, humax.BadRequest("google account has no email")
+	}
+	if name == "" {
+		name = emailLocalPart(email)
+	}
+
+	user, err := h.queries.AuthFindUserByEmail(ctx, strings.ToLower(email))
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		user, err = h.queries.AuthCreateUser(ctx, compiled.AuthCreateUserParams{
+			Email: strings.ToLower(email),
+			Name:  name,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	token, err := generateSessionToken()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := h.queries.AuthCreateSession(ctx, compiled.AuthCreateSessionParams{
+		UserID:    user.ID,
+		Token:     token,
+		ExpiresAt: pgxTimestamp(time.Now().Add(sessionTTL)),
+	}); err != nil {
+		return nil, err
+	}
+
+	if !user.SelectedCompanyID.Valid {
+		if firstCompanyID, err := h.queries.AuthFirstCompanyForUser(ctx, user.ID); err == nil {
+			_ = h.queries.AuthSetSelectedCompany(ctx, compiled.AuthSetSelectedCompanyParams{
+				ID:                user.ID,
+				SelectedCompanyID: pgtype.Int8{Int64: firstCompanyID, Valid: true},
+			})
+			user.SelectedCompanyID = pgtype.Int8{Int64: firstCompanyID, Valid: true}
+		}
+	}
+
+	p := principalFromRow(user, token)
+	h.cache.SetWithTTL(token, p, sessionCacheTTL)
+
+	return &LoginVerifyOutput{Body: VerifyResponse{
+		Token: token,
+		Profile: AuthProfile{
+			ID:                p.UserID,
+			Email:             p.Email,
+			Name:              p.Name,
+			SelectedCompanyID: p.SelectedCompanyID,
+		},
 	}}, nil
 }
 
