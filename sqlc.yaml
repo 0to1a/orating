@@ -1,0 +1,15 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries:
+      - "internal/auth/query.sql"
+      - "internal/user/query.sql"
+      - "internal/company/query.sql"
+      - "internal/apikey/query.sql"
+      - "internal/featureflag/query.sql"
+    schema: "internal/platform/migration/sql"
+    gen:
+      go:
+        package: "compiled"
+        out: "internal/platform/compiled"
+        sql_package: "pgx/v5"

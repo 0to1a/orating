@@ -1,0 +1,231 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  /* Surface ramp utilities */
+  --color-bg: var(--bg);
+  --color-s1: var(--s1);
+  --color-s2: var(--s2);
+  --color-s3: var(--s3);
+  --color-s4: var(--s4);
+
+  /* Text utilities */
+  --color-t1: var(--t1);
+  --color-t2: var(--t2);
+  --color-t3: var(--t3);
+
+  /* Brand / semantic */
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-card: 0.875rem;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Design tokens — dark mode always */
+    --bg: #0a0c11;
+    --s1: #10131a;
+    --s2: #161a23;
+    --s3: #1d2330;
+    --s4: #262d3c;
+    --border-h: rgba(255, 255, 255, 0.07);
+    --border-h2: rgba(255, 255, 255, 0.12);
+    --t1: #f3f5fa;
+    --t2: #a4adbd;
+    --t3: #6a7385;
+    --brand: #5e7cf5;
+    --brand-soft: rgba(94, 124, 245, 0.15);
+    --brand-text: #b3c0ff;
+    --ok: #34d399;
+    --ok-soft: rgba(52, 211, 153, 0.13);
+    --warn: #fbbf24;
+    --warn-soft: rgba(251, 191, 36, 0.13);
+    --danger: #fb7185;
+    --danger-soft: rgba(251, 113, 133, 0.13);
+  }
+
+  .dark {
+    /* Shadcn HSL vars — mapped to new surface ramp */
+    --background: 223 26% 5%;
+    --foreground: 220 14% 97%;
+    --card: 222 23% 11%;
+    --card-foreground: 220 14% 97%;
+    --popover: 221 25% 15%;
+    --popover-foreground: 220 14% 97%;
+    --primary: 228 88% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 221 25% 15%;
+    --secondary-foreground: 220 14% 97%;
+    --muted: 221 25% 15%;
+    --muted-foreground: 218 16% 68%;
+    --accent: 221 22% 19%;
+    --accent-foreground: 220 14% 97%;
+    --destructive: 350 92% 72%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 22% 12%;
+    --input: 221 25% 15%;
+    --ring: 228 88% 66%;
+    --sidebar-background: 222 24% 8%;
+    --sidebar-foreground: 220 14% 97%;
+    --sidebar-primary: 228 88% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 221 22% 19%;
+    --sidebar-accent-foreground: 220 14% 97%;
+    --sidebar-border: 222 22% 12%;
+    --sidebar-ring: 228 88% 66%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::selection {
+    background: var(--brand-soft);
+  }
+}
+
+/* Mono utility for data-plane values */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+/* Avatar initials circle */
+.avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-family: var(--font-sans);
+}
+
+/* Role pill */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+.role-pill.muted {
+  background: var(--s4);
+  color: var(--t2);
+}
+
+/* Nav count badge */
+.nav-count {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  color: var(--t3);
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum";
+}
+
+/* Focus ring consistent with brand */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+
+/* Responsive sidebar hide */
+@media (max-width: 880px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dashboard-cols {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

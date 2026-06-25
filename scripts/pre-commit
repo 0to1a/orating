@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Subset cepat dari `make check` — vet + tsc no-emit.
+# Full check (`make check`) jalan di CI / sebelum push.
+set -euo pipefail
+
+go vet ./... || exit 1
+
+if [ -d frontend ]; then
+    cd frontend && bun run tsc --noEmit
+fi

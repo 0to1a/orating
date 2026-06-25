@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login Code</title>
+</head>
+<body style="font-family:ui-sans-serif,system-ui,-apple-system,sans-serif;background:#f7f7f7;margin:0;padding:32px;">
+  <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:8px;padding:32px;border:1px solid #eee;">
+    <h1 style="font-size:20px;margin:0 0 16px;color:#111;">Your login code</h1>
+    <p style="color:#444;line-height:1.5;">
+      Use this code to sign in. It expires in {{.MinutesValid}} minutes.
+    </p>
+    <div style="font-size:32px;font-weight:bold;letter-spacing:8px;background:#f0f0f0;padding:16px;text-align:center;border-radius:6px;margin:24px 0;color:#111;">
+      {{.OTP}}
+    </div>
+    <p style="color:#888;font-size:13px;line-height:1.4;">
+      If you didn't request this, you can safely ignore this email.
+    </p>
+  </div>
+</body>
+</html>
