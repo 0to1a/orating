@@ -46,6 +46,20 @@ export type ApiKeyListResponseWritable = {
     apiKeys: Array<ApiKeyInfo> | null;
 };
 
+export type AddMemberRequestReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    email: string;
+    name?: string;
+};
+
+export type AddMemberRequestWritable = {
+    email: string;
+    name?: string;
+};
+
 export type AdminContextResponseReadable = {
     /**
      * A URL to the JSON Schema for this object.
@@ -138,6 +152,45 @@ export type CompanyOption = {
     name: string;
 };
 
+export type CreateEventRequestReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    cycles: Array<CycleInput> | null;
+    description?: string;
+    forms: Array<FormInput> | null;
+    members?: Array<string> | null;
+    name: string;
+    visibility: string;
+};
+
+export type CreateEventRequestWritable = {
+    cycles: Array<CycleInput> | null;
+    description?: string;
+    forms: Array<FormInput> | null;
+    members?: Array<string> | null;
+    name: string;
+    visibility: string;
+};
+
+export type CycleAverageResult = {
+    average: number;
+    cycleId: number;
+    formId: number;
+};
+
+export type CycleInfo = {
+    eventId: number;
+    id: number;
+    name: string;
+    orderIndex: number;
+};
+
+export type CycleInput = {
+    name: string;
+};
+
 export type ErrorDetail = {
     /**
      * Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'
@@ -211,6 +264,53 @@ export type ErrorModelWritable = {
     type?: string;
 };
 
+export type EventDetailReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    companyId: number;
+    createdAt: string;
+    currentStage: string;
+    cycles: Array<CycleInfo> | null;
+    description?: string;
+    forms: Array<FormInfo> | null;
+    hostId: number;
+    id: number;
+    name: string;
+    status: string;
+    updatedAt: string;
+    visibility: string;
+};
+
+export type EventDetailWritable = {
+    companyId: number;
+    createdAt: string;
+    currentStage: string;
+    cycles: Array<CycleInfo> | null;
+    description?: string;
+    forms: Array<FormInfo> | null;
+    hostId: number;
+    id: number;
+    name: string;
+    status: string;
+    updatedAt: string;
+    visibility: string;
+};
+
+export type EventInfo = {
+    companyId: number;
+    createdAt: string;
+    currentStage: string;
+    description?: string;
+    hostId: number;
+    id: number;
+    name: string;
+    status: string;
+    updatedAt: string;
+    visibility: string;
+};
+
 export type FlagListResponseReadable = {
     /**
      * A URL to the JSON Schema for this object.
@@ -225,6 +325,25 @@ export type FlagListResponseWritable = {
     flags: {
         [key: string]: boolean;
     };
+};
+
+export type FormInfo = {
+    eventId: number;
+    id: number;
+    label: string;
+    orderIndex: number;
+    type: string;
+};
+
+export type FormInput = {
+    label: string;
+    type: string;
+};
+
+export type FreeTextResult = {
+    cycleId: number;
+    formId: number;
+    texts: Array<string> | null;
 };
 
 export type InviteRequestReadable = {
@@ -253,6 +372,18 @@ export type InviteResponseReadable = {
 
 export type InviteResponseWritable = {
     member: Member;
+};
+
+export type ListEventsOutputBodyReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    events: Array<EventInfo> | null;
+};
+
+export type ListEventsOutputBodyWritable = {
+    events: Array<EventInfo> | null;
 };
 
 export type LoginRequestReadable = {
@@ -287,6 +418,52 @@ export type MemberListResponseWritable = {
     members: Array<Member> | null;
 };
 
+export type MonitorResponseReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    activeCycleId?: number;
+    participantCount: number;
+    respondedCount: number;
+};
+
+export type MonitorResponseWritable = {
+    activeCycleId?: number;
+    participantCount: number;
+    respondedCount: number;
+};
+
+export type NextCycleRequestReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    cycleId: number;
+};
+
+export type NextCycleRequestWritable = {
+    cycleId: number;
+};
+
+export type ParticipantInfoReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    eventId: number;
+    id: number;
+    joinedAt: string;
+    userId: number;
+};
+
+export type ParticipantInfoWritable = {
+    eventId: number;
+    id: number;
+    joinedAt: string;
+    userId: number;
+};
+
 export type ProfileReadable = {
     /**
      * A URL to the JSON Schema for this object.
@@ -307,6 +484,42 @@ export type ProfileWritable = {
     selectedCompanyId: number;
 };
 
+export type RespondItemInput = {
+    formId: number;
+    valueNumber?: number;
+    valueText?: string;
+};
+
+export type RespondRequestReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    items: Array<RespondItemInput> | null;
+};
+
+export type RespondRequestWritable = {
+    items: Array<RespondItemInput> | null;
+};
+
+export type ResultsResponseReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    avgTable: Array<CycleAverageResult> | null;
+    cycles: Array<CycleInfo> | null;
+    forms: Array<FormInfo> | null;
+    freeTexts: Array<FreeTextResult> | null;
+};
+
+export type ResultsResponseWritable = {
+    avgTable: Array<CycleAverageResult> | null;
+    cycles: Array<CycleInfo> | null;
+    forms: Array<FormInfo> | null;
+    freeTexts: Array<FreeTextResult> | null;
+};
+
 export type Role = {
     label: string;
     value: string;
@@ -322,6 +535,38 @@ export type RolesResponseReadable = {
 
 export type RolesResponseWritable = {
     roles: Array<Role> | null;
+};
+
+export type SessionResponseReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    activeCycleId?: number;
+    activeCycleName?: string;
+    currentStage: string;
+    forms: Array<FormInfo> | null;
+    myResponseSubmitted: boolean;
+};
+
+export type SessionResponseWritable = {
+    activeCycleId?: number;
+    activeCycleName?: string;
+    currentStage: string;
+    forms: Array<FormInfo> | null;
+    myResponseSubmitted: boolean;
+};
+
+export type StartCycleRequestReadable = {
+    /**
+     * A URL to the JSON Schema for this object.
+     */
+    readonly $schema?: string;
+    cycleId: number;
+};
+
+export type StartCycleRequestWritable = {
+    cycleId: number;
 };
 
 export type UpdateProfileRequestReadable = {
@@ -788,6 +1033,429 @@ export type SelectCompanyResponses = {
 };
 
 export type SelectCompanyResponse = SelectCompanyResponses[keyof SelectCompanyResponses];
+
+export type ListEventsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/events';
+};
+
+export type ListEventsErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type ListEventsError = ListEventsErrors[keyof ListEventsErrors];
+
+export type ListEventsResponses = {
+    /**
+     * OK
+     */
+    200: ListEventsOutputBodyReadable;
+};
+
+export type ListEventsResponse = ListEventsResponses[keyof ListEventsResponses];
+
+export type CreateEventData = {
+    body: CreateEventRequestWritable;
+    path?: never;
+    query?: never;
+    url: '/api/events';
+};
+
+export type CreateEventErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type CreateEventError = CreateEventErrors[keyof CreateEventErrors];
+
+export type CreateEventResponses = {
+    /**
+     * Created
+     */
+    201: EventDetailReadable;
+};
+
+export type CreateEventResponse = CreateEventResponses[keyof CreateEventResponses];
+
+export type GetEventData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}';
+};
+
+export type GetEventErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type GetEventError = GetEventErrors[keyof GetEventErrors];
+
+export type GetEventResponses = {
+    /**
+     * OK
+     */
+    200: EventDetailReadable;
+};
+
+export type GetEventResponse = GetEventResponses[keyof GetEventResponses];
+
+export type ActivateEventData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/activate';
+};
+
+export type ActivateEventErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type ActivateEventError = ActivateEventErrors[keyof ActivateEventErrors];
+
+export type ActivateEventResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type ActivateEventResponse = ActivateEventResponses[keyof ActivateEventResponses];
+
+export type EndEventData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/end';
+};
+
+export type EndEventErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type EndEventError = EndEventErrors[keyof EndEventErrors];
+
+export type EndEventResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type EndEventResponse = EndEventResponses[keyof EndEventResponses];
+
+export type JoinEventData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/join';
+};
+
+export type JoinEventErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type JoinEventError = JoinEventErrors[keyof JoinEventErrors];
+
+export type JoinEventResponses = {
+    /**
+     * Created
+     */
+    201: ParticipantInfoReadable;
+};
+
+export type JoinEventResponse = JoinEventResponses[keyof JoinEventResponses];
+
+export type AddEventMemberData = {
+    body: AddMemberRequestWritable;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/members';
+};
+
+export type AddEventMemberErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type AddEventMemberError = AddEventMemberErrors[keyof AddEventMemberErrors];
+
+export type AddEventMemberResponses = {
+    /**
+     * Created
+     */
+    201: unknown;
+};
+
+export type RemoveEventMemberData = {
+    body?: never;
+    path: {
+        id: number;
+        userId: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/members/{userId}';
+};
+
+export type RemoveEventMemberErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type RemoveEventMemberError = RemoveEventMemberErrors[keyof RemoveEventMemberErrors];
+
+export type RemoveEventMemberResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type RemoveEventMemberResponse = RemoveEventMemberResponses[keyof RemoveEventMemberResponses];
+
+export type GetEventMonitorData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/monitor';
+};
+
+export type GetEventMonitorErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type GetEventMonitorError = GetEventMonitorErrors[keyof GetEventMonitorErrors];
+
+export type GetEventMonitorResponses = {
+    /**
+     * OK
+     */
+    200: MonitorResponseReadable;
+};
+
+export type GetEventMonitorResponse = GetEventMonitorResponses[keyof GetEventMonitorResponses];
+
+export type NextCycleData = {
+    body: NextCycleRequestWritable;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/next-cycle';
+};
+
+export type NextCycleErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type NextCycleError = NextCycleErrors[keyof NextCycleErrors];
+
+export type NextCycleResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type NextCycleResponse = NextCycleResponses[keyof NextCycleResponses];
+
+export type RespondToCycleData = {
+    body: RespondRequestWritable;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/respond';
+};
+
+export type RespondToCycleErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type RespondToCycleError = RespondToCycleErrors[keyof RespondToCycleErrors];
+
+export type RespondToCycleResponses = {
+    /**
+     * Created
+     */
+    201: unknown;
+};
+
+export type GetEventResultsData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/results';
+};
+
+export type GetEventResultsErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type GetEventResultsError = GetEventResultsErrors[keyof GetEventResultsErrors];
+
+export type GetEventResultsResponses = {
+    /**
+     * OK
+     */
+    200: ResultsResponseReadable;
+};
+
+export type GetEventResultsResponse = GetEventResultsResponses[keyof GetEventResultsResponses];
+
+export type ExportEventResultsData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/results/export';
+};
+
+export type ExportEventResultsErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type ExportEventResultsError = ExportEventResultsErrors[keyof ExportEventResultsErrors];
+
+export type ExportEventResultsResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+};
+
+export type GetEventSessionData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/session';
+};
+
+export type GetEventSessionErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type GetEventSessionError = GetEventSessionErrors[keyof GetEventSessionErrors];
+
+export type GetEventSessionResponses = {
+    /**
+     * OK
+     */
+    200: SessionResponseReadable;
+};
+
+export type GetEventSessionResponse = GetEventSessionResponses[keyof GetEventSessionResponses];
+
+export type ShowFormData = {
+    body?: never;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/show-form';
+};
+
+export type ShowFormErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type ShowFormError = ShowFormErrors[keyof ShowFormErrors];
+
+export type ShowFormResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type ShowFormResponse = ShowFormResponses[keyof ShowFormResponses];
+
+export type StartCycleData = {
+    body: StartCycleRequestWritable;
+    path: {
+        id: number;
+    };
+    query?: never;
+    url: '/api/events/{id}/start-cycle';
+};
+
+export type StartCycleErrors = {
+    /**
+     * Error
+     */
+    default: ErrorModelReadable;
+};
+
+export type StartCycleError = StartCycleErrors[keyof StartCycleErrors];
+
+export type StartCycleResponses = {
+    /**
+     * No Content
+     */
+    204: void;
+};
+
+export type StartCycleResponse = StartCycleResponses[keyof StartCycleResponses];
 
 export type ListFeatureFlagsData = {
     body?: never;

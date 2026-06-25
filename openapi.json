@@ -104,6 +104,30 @@
         ],
         "type": "object"
       },
+      "AddMemberRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/AddMemberRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "type": "object"
+      },
       "AdminContextResponse": {
         "additionalProperties": false,
         "properties": {
@@ -335,6 +359,125 @@
         ],
         "type": "object"
       },
+      "CreateEventRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/CreateEventRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cycles": {
+            "items": {
+              "$ref": "#/components/schemas/CycleInput"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/FormInput"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "members": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "visibility",
+          "cycles",
+          "forms"
+        ],
+        "type": "object"
+      },
+      "CycleAverageResult": {
+        "additionalProperties": false,
+        "properties": {
+          "average": {
+            "format": "double",
+            "type": "number"
+          },
+          "cycleId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "formId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cycleId",
+          "formId",
+          "average"
+        ],
+        "type": "object"
+      },
+      "CycleInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "eventId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "name",
+          "orderIndex"
+        ],
+        "type": "object"
+      },
+      "CycleInput": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "ErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -416,6 +559,139 @@
         },
         "type": "object"
       },
+      "EventDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/EventDetail.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "companyId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currentStage": {
+            "type": "string"
+          },
+          "cycles": {
+            "items": {
+              "$ref": "#/components/schemas/CycleInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/FormInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "hostId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cycles",
+          "forms",
+          "id",
+          "companyId",
+          "hostId",
+          "name",
+          "visibility",
+          "status",
+          "currentStage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
+      "EventInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "companyId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "currentStage": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "hostId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "companyId",
+          "hostId",
+          "name",
+          "visibility",
+          "status",
+          "currentStage",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object"
+      },
       "FlagListResponse": {
         "additionalProperties": false,
         "properties": {
@@ -437,6 +713,81 @@
         },
         "required": [
           "flags"
+        ],
+        "type": "object"
+      },
+      "FormInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "eventId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "type",
+          "label",
+          "orderIndex"
+        ],
+        "type": "object"
+      },
+      "FormInput": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "label"
+        ],
+        "type": "object"
+      },
+      "FreeTextResult": {
+        "additionalProperties": false,
+        "properties": {
+          "cycleId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "formId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "texts": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "cycleId",
+          "formId",
+          "texts"
         ],
         "type": "object"
       },
@@ -487,6 +838,33 @@
         },
         "required": [
           "member"
+        ],
+        "type": "object"
+      },
+      "ListEventsOutputBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ListEventsOutputBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "events"
         ],
         "type": "object"
       },
@@ -567,6 +945,96 @@
         ],
         "type": "object"
       },
+      "MonitorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/MonitorResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "activeCycleId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "participantCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "respondedCount": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "participantCount",
+          "respondedCount"
+        ],
+        "type": "object"
+      },
+      "NextCycleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/NextCycleRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cycleId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cycleId"
+        ],
+        "type": "object"
+      },
+      "ParticipantInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ParticipantInfo.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "eventId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "joinedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "userId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "eventId",
+          "userId",
+          "joinedAt"
+        ],
+        "type": "object"
+      },
       "Profile": {
         "additionalProperties": false,
         "properties": {
@@ -603,6 +1071,110 @@
           "name",
           "selectedCompanyId",
           "createdAt"
+        ],
+        "type": "object"
+      },
+      "RespondItemInput": {
+        "additionalProperties": false,
+        "properties": {
+          "formId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "valueNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "valueText": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "formId"
+        ],
+        "type": "object"
+      },
+      "RespondRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/RespondRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RespondItemInput"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "ResultsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/ResultsResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "avgTable": {
+            "items": {
+              "$ref": "#/components/schemas/CycleAverageResult"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "cycles": {
+            "items": {
+              "$ref": "#/components/schemas/CycleInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/FormInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "freeTexts": {
+            "items": {
+              "$ref": "#/components/schemas/FreeTextResult"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "cycles",
+          "forms",
+          "avgTable",
+          "freeTexts"
         ],
         "type": "object"
       },
@@ -646,6 +1218,70 @@
         },
         "required": [
           "roles"
+        ],
+        "type": "object"
+      },
+      "SessionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/SessionResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "activeCycleId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "activeCycleName": {
+            "type": "string"
+          },
+          "currentStage": {
+            "type": "string"
+          },
+          "forms": {
+            "items": {
+              "$ref": "#/components/schemas/FormInfo"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "myResponseSubmitted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "currentStage",
+          "myResponseSubmitted",
+          "forms"
+        ],
+        "type": "object"
+      },
+      "StartCycleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "https://example.com/schemas/StartCycleRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cycleId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cycleId"
         ],
         "type": "object"
       },
@@ -1408,6 +2044,730 @@
         "summary": "Select active company",
         "tags": [
           "company"
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "list-events",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEventsOutputBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List rating events",
+        "tags": [
+          "rating"
+        ]
+      },
+      "post": {
+        "operationId": "create-event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetail"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Create a rating event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "operationId": "get-event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDetail"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get a rating event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/activate": {
+      "post": {
+        "operationId": "activate-event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Activate an event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/end": {
+      "post": {
+        "operationId": "end-event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "End an event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/join": {
+      "post": {
+        "operationId": "join-event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantInfo"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Join a rating event as a rater",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/members": {
+      "post": {
+        "operationId": "add-event-member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Add a member to a private event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/members/{userId}": {
+      "delete": {
+        "operationId": "remove-event-member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Remove a member from a private event",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/monitor": {
+      "get": {
+        "operationId": "get-event-monitor",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitorResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get monitor counts for the active cycle",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/next-cycle": {
+      "post": {
+        "operationId": "next-cycle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NextCycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Advance to the next cycle",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/respond": {
+      "post": {
+        "operationId": "respond-to-cycle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Submit rater responses for the current cycle",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/results": {
+      "get": {
+        "operationId": "get-event-results",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultsResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get event results",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/results/export": {
+      "get": {
+        "operationId": "export-event-results",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Download event results as CSV",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/session": {
+      "get": {
+        "operationId": "get-event-session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Get current session state for rater polling",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/show-form": {
+      "post": {
+        "operationId": "show-form",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Open the rating form for the current cycle",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/events/{id}/start-cycle": {
+      "post": {
+        "operationId": "start-cycle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartCycleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Start a cycle",
+        "tags": [
+          "rating"
         ]
       }
     },
