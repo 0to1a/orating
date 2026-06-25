@@ -39,6 +39,32 @@ type CompanyMember struct {
 	DeletedAt pgtype.Timestamp
 }
 
+type Cycle struct {
+	ID         int64
+	EventID    int64
+	Name       string
+	OrderIndex int32
+}
+
+type Event struct {
+	ID            int64
+	CompanyID     int64
+	HostID        int64
+	Name          string
+	Description   pgtype.Text
+	Visibility    string
+	Status        string
+	CurrentStage  string
+	ActiveCycleID pgtype.Int8
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
+}
+
+type EventMember struct {
+	EventID int64
+	UserID  int64
+}
+
 type FeatureFlag struct {
 	ID        int64
 	CompanyID int64
@@ -47,6 +73,36 @@ type FeatureFlag struct {
 	Payload   []byte
 	CreatedAt pgtype.Timestamp
 	UpdatedAt pgtype.Timestamp
+}
+
+type Form struct {
+	ID         int64
+	EventID    int64
+	Type       string
+	Label      string
+	OrderIndex int32
+}
+
+type Participant struct {
+	ID       int64
+	EventID  int64
+	UserID   int64
+	JoinedAt pgtype.Timestamp
+}
+
+type Response struct {
+	ID            int64
+	CycleID       int64
+	ParticipantID int64
+	SubmittedAt   pgtype.Timestamp
+}
+
+type ResponseItem struct {
+	ID          int64
+	ResponseID  int64
+	FormID      int64
+	ValueNumber pgtype.Int4
+	ValueText   pgtype.Text
 }
 
 type User struct {

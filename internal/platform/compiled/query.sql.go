@@ -917,6 +917,340 @@ func (q *Queries) FFUpsert(ctx context.Context, arg FFUpsertParams) (FFUpsertRow
 	return i, err
 }
 
+const ratingAddEventMember = `-- name: RatingAddEventMember :exec
+INSERT INTO event_members (event_id, user_id) VALUES ($1, $2)
+`
+
+type RatingAddEventMemberParams struct {
+	EventID int64
+	UserID  int64
+}
+
+func (q *Queries) RatingAddEventMember(ctx context.Context, arg RatingAddEventMemberParams) error {
+	_, err := q.db.Exec(ctx, ratingAddEventMember, arg.EventID, arg.UserID)
+	return err
+}
+
+const ratingBulkInsertCycles = `-- name: RatingBulkInsertCycles :many
+INSERT INTO cycles (event_id, name, order_index)
+SELECT $1, unnest($2::text[]), generate_series(0, array_length($2::text[], 1) - 1)
+RETURNING id, event_id, name, order_index
+`
+
+type RatingBulkInsertCyclesParams struct {
+	EventID int64
+	Column2 []string
+}
+
+func (q *Queries) RatingBulkInsertCycles(ctx context.Context, arg RatingBulkInsertCyclesParams) ([]Cycle, error) {
+	rows, err := q.db.Query(ctx, ratingBulkInsertCycles, arg.EventID, arg.Column2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cycle
+	for rows.Next() {
+		var i Cycle
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Name,
+			&i.OrderIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingBulkInsertForms = `-- name: RatingBulkInsertForms :many
+INSERT INTO forms (event_id, type, label, order_index)
+SELECT $1, unnest($2::text[]), unnest($3::text[]), generate_series(0, array_length($2::text[], 1) - 1)
+RETURNING id, event_id, type, label, order_index
+`
+
+type RatingBulkInsertFormsParams struct {
+	EventID int64
+	Column2 []string
+	Column3 []string
+}
+
+func (q *Queries) RatingBulkInsertForms(ctx context.Context, arg RatingBulkInsertFormsParams) ([]Form, error) {
+	rows, err := q.db.Query(ctx, ratingBulkInsertForms, arg.EventID, arg.Column2, arg.Column3)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Form
+	for rows.Next() {
+		var i Form
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Type,
+			&i.Label,
+			&i.OrderIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingCreateEvent = `-- name: RatingCreateEvent :one
+INSERT INTO events (company_id, host_id, name, description, visibility, status, current_stage)
+VALUES ($1, $2, $3, $4, $5, 'draft', 'idle')
+RETURNING id, company_id, host_id, name, description, visibility, status, current_stage, active_cycle_id, created_at, updated_at
+`
+
+type RatingCreateEventParams struct {
+	CompanyID   int64
+	HostID      int64
+	Name        string
+	Description pgtype.Text
+	Visibility  string
+}
+
+func (q *Queries) RatingCreateEvent(ctx context.Context, arg RatingCreateEventParams) (Event, error) {
+	row := q.db.QueryRow(ctx, ratingCreateEvent,
+		arg.CompanyID,
+		arg.HostID,
+		arg.Name,
+		arg.Description,
+		arg.Visibility,
+	)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.HostID,
+		&i.Name,
+		&i.Description,
+		&i.Visibility,
+		&i.Status,
+		&i.CurrentStage,
+		&i.ActiveCycleID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const ratingCreateUser = `-- name: RatingCreateUser :one
+INSERT INTO users (email, name) VALUES ($1, $2) RETURNING id, email, name
+`
+
+type RatingCreateUserParams struct {
+	Email string
+	Name  string
+}
+
+type RatingCreateUserRow struct {
+	ID    int64
+	Email string
+	Name  string
+}
+
+func (q *Queries) RatingCreateUser(ctx context.Context, arg RatingCreateUserParams) (RatingCreateUserRow, error) {
+	row := q.db.QueryRow(ctx, ratingCreateUser, arg.Email, arg.Name)
+	var i RatingCreateUserRow
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	return i, err
+}
+
+const ratingFindUserByEmail = `-- name: RatingFindUserByEmail :one
+SELECT id, email, name FROM users WHERE email = $1 AND deleted_at IS NULL
+`
+
+type RatingFindUserByEmailRow struct {
+	ID    int64
+	Email string
+	Name  string
+}
+
+func (q *Queries) RatingFindUserByEmail(ctx context.Context, email string) (RatingFindUserByEmailRow, error) {
+	row := q.db.QueryRow(ctx, ratingFindUserByEmail, email)
+	var i RatingFindUserByEmailRow
+	err := row.Scan(&i.ID, &i.Email, &i.Name)
+	return i, err
+}
+
+const ratingGetEvent = `-- name: RatingGetEvent :one
+SELECT id, company_id, host_id, name, description, visibility, status, current_stage, active_cycle_id, created_at, updated_at FROM events
+WHERE id = $1 AND company_id = $2
+  AND (visibility = 'public' OR host_id = $3 OR EXISTS (
+    SELECT 1 FROM event_members WHERE event_id = events.id AND user_id = $3
+  ))
+`
+
+type RatingGetEventParams struct {
+	ID        int64
+	CompanyID int64
+	HostID    int64
+}
+
+func (q *Queries) RatingGetEvent(ctx context.Context, arg RatingGetEventParams) (Event, error) {
+	row := q.db.QueryRow(ctx, ratingGetEvent, arg.ID, arg.CompanyID, arg.HostID)
+	var i Event
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.HostID,
+		&i.Name,
+		&i.Description,
+		&i.Visibility,
+		&i.Status,
+		&i.CurrentStage,
+		&i.ActiveCycleID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const ratingGetEventCycles = `-- name: RatingGetEventCycles :many
+SELECT id, event_id, name, order_index FROM cycles WHERE event_id = $1 ORDER BY order_index
+`
+
+func (q *Queries) RatingGetEventCycles(ctx context.Context, eventID int64) ([]Cycle, error) {
+	rows, err := q.db.Query(ctx, ratingGetEventCycles, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cycle
+	for rows.Next() {
+		var i Cycle
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Name,
+			&i.OrderIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingGetEventForms = `-- name: RatingGetEventForms :many
+SELECT id, event_id, type, label, order_index FROM forms WHERE event_id = $1 ORDER BY order_index
+`
+
+func (q *Queries) RatingGetEventForms(ctx context.Context, eventID int64) ([]Form, error) {
+	rows, err := q.db.Query(ctx, ratingGetEventForms, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Form
+	for rows.Next() {
+		var i Form
+		if err := rows.Scan(
+			&i.ID,
+			&i.EventID,
+			&i.Type,
+			&i.Label,
+			&i.OrderIndex,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingGetEventMember = `-- name: RatingGetEventMember :one
+SELECT event_id, user_id FROM event_members WHERE event_id = $1 AND user_id = $2
+`
+
+type RatingGetEventMemberParams struct {
+	EventID int64
+	UserID  int64
+}
+
+func (q *Queries) RatingGetEventMember(ctx context.Context, arg RatingGetEventMemberParams) (EventMember, error) {
+	row := q.db.QueryRow(ctx, ratingGetEventMember, arg.EventID, arg.UserID)
+	var i EventMember
+	err := row.Scan(&i.EventID, &i.UserID)
+	return i, err
+}
+
+const ratingListEvents = `-- name: RatingListEvents :many
+SELECT id, company_id, host_id, name, description, visibility, status, current_stage, active_cycle_id, created_at, updated_at FROM events
+WHERE company_id = $1
+  AND (visibility = 'public' OR host_id = $2 OR EXISTS (
+    SELECT 1 FROM event_members WHERE event_id = events.id AND user_id = $2
+  ))
+ORDER BY created_at DESC
+`
+
+type RatingListEventsParams struct {
+	CompanyID int64
+	HostID    int64
+}
+
+func (q *Queries) RatingListEvents(ctx context.Context, arg RatingListEventsParams) ([]Event, error) {
+	rows, err := q.db.Query(ctx, ratingListEvents, arg.CompanyID, arg.HostID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Event
+	for rows.Next() {
+		var i Event
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.HostID,
+			&i.Name,
+			&i.Description,
+			&i.Visibility,
+			&i.Status,
+			&i.CurrentStage,
+			&i.ActiveCycleID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const ratingRemoveEventMember = `-- name: RatingRemoveEventMember :exec
+DELETE FROM event_members WHERE event_id = $1 AND user_id = $2
+`
+
+type RatingRemoveEventMemberParams struct {
+	EventID int64
+	UserID  int64
+}
+
+func (q *Queries) RatingRemoveEventMember(ctx context.Context, arg RatingRemoveEventMemberParams) error {
+	_, err := q.db.Exec(ctx, ratingRemoveEventMember, arg.EventID, arg.UserID)
+	return err
+}
+
 const userGetByID = `-- name: UserGetByID :one
 SELECT id, email, name, otp_code, otp_expires_at, selected_company_id, created_at, updated_at, deleted_at
 FROM users

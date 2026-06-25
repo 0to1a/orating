@@ -5,6 +5,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"project/internal/platform/compiled"
 	"project/internal/platform/cron"
@@ -18,6 +19,7 @@ type Deps struct {
 	Scheduler       *cron.Scheduler
 	Logger          *slog.Logger
 	Queries         *compiled.Queries
+	Pool            *pgxpool.Pool
 	Mailer          mailer.Mailer
 	APIKeyMw        httpx.Middleware
 	AuthInvalidator func(token string)

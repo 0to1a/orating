@@ -10,6 +10,7 @@ import (
 	"project/internal/company"
 	"project/internal/featureflag"
 	"project/internal/platform"
+	"project/internal/rating"
 	"project/internal/user"
 )
 
@@ -26,5 +27,6 @@ func RegisterAll(ctx context.Context, deps platform.Deps) error {
 	user.Setup(ctx, deps)
 	company.Setup(ctx, deps)
 	featureflag.Setup(ctx, deps)
+	rating.Setup(ctx, deps)
 	return nil
 }

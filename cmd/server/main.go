@@ -29,6 +29,7 @@ import (
 	"project/internal/company"
 	"project/internal/featureflag"
 	"project/internal/platform"
+	"project/internal/rating"
 	"project/internal/platform/compiled"
 	"project/internal/platform/cron"
 	"project/internal/platform/frontend"
@@ -107,6 +108,7 @@ func main() {
 		Scheduler: scheduler,
 		Logger:    logger,
 		Queries:   queries,
+		Pool:      pool,
 		Mailer:    mail,
 		APIKeyMw:  apikeyMod.Middleware,
 	}
@@ -121,6 +123,7 @@ func main() {
 	user.Setup(bgCtx, deps)
 	company.Setup(bgCtx, deps)
 	featureflag.Setup(bgCtx, deps)
+	rating.Setup(bgCtx, deps)
 
 	// Health check.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
