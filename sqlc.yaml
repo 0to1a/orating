@@ -7,6 +7,7 @@ sql:
       - "internal/company/query.sql"
       - "internal/apikey/query.sql"
       - "internal/featureflag/query.sql"
+      - "internal/rating/query.sql"
     schema: "internal/platform/migration/sql"
     gen:
       go:

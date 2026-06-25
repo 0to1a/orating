@@ -1,0 +1,9 @@
+ALTER TABLE events DROP CONSTRAINT IF EXISTS fk_events_active_cycle;
+
+DROP TABLE IF EXISTS response_items;
+DROP TABLE IF EXISTS responses;
+DROP TABLE IF EXISTS participants;
+DROP TABLE IF EXISTS event_members;
+DROP TABLE IF EXISTS forms;
+DROP TABLE IF EXISTS cycles;
+DROP TABLE IF EXISTS events;
