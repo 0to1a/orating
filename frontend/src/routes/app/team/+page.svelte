@@ -42,12 +42,16 @@
 	});
 
 	let inviteOpen = $state(false);
-	let inviteRaw = $state('');
+	let inviteChips = $state<Array<{ name: string; email: string }>>([]);
+	let inviteInput = $state('');
 	let inviteRole = $state('member');
+	let inviteTagEl = $state<HTMLInputElement | null>(null);
+	let inviteTagFocused = $state(false);
 
 	$effect(() => {
 		if (!inviteOpen) {
-			inviteRaw = '';
+			inviteChips = [];
+			inviteInput = '';
 			inviteRole = 'member';
 		}
 	});
@@ -81,7 +85,7 @@
 		})
 	);
 
-	function parseInviteRaw(raw: string): Array<{ name: string; email: string }> {
+	function parseEntries(raw: string): Array<{ name: string; email: string }> {
 		return raw
 			.split(/[,\n]+/)
 			.map((s) => s.trim())
@@ -105,12 +109,39 @@
 			});
 	}
 
-	const parsedInvites = $derived(parseInviteRaw(inviteRaw));
+	function addEntries(raw: string) {
+		const existing = new Set(inviteChips.map((c) => c.email));
+		const fresh = parseEntries(raw).filter((p) => !existing.has(p.email));
+		inviteChips = [...inviteChips, ...fresh];
+	}
+
+	function removeChip(email: string) {
+		inviteChips = inviteChips.filter((c) => c.email !== email);
+	}
+
+	function handleTagKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+			if (inviteInput.trim()) {
+				e.preventDefault();
+				addEntries(inviteInput);
+				inviteInput = '';
+			}
+		} else if (e.key === 'Backspace' && !inviteInput && inviteChips.length > 0) {
+			inviteChips = inviteChips.slice(0, -1);
+		}
+	}
+
+	function handleTagPaste(e: ClipboardEvent) {
+		e.preventDefault();
+		const text = e.clipboardData?.getData('text') ?? '';
+		addEntries(text);
+		inviteInput = '';
+	}
 
 	const inviteMut = createMutation({
 		mutationFn: async () => {
 			const results = await Promise.allSettled(
-				parsedInvites.map(({ name, email }) =>
+				inviteChips.map(({ name, email }) =>
 					inviteCompanyMember({ body: { email, name, role: inviteRole } })
 				)
 			);
@@ -121,7 +152,8 @@
 		onSuccess: ({ succeeded, failed }) => {
 			qc.invalidateQueries({ queryKey: ['members'] });
 			inviteOpen = false;
-			inviteRaw = '';
+			inviteChips = [];
+			inviteInput = '';
 			inviteRole = 'member';
 			if (failed > 0 && succeeded > 0) {
 				toast.warning(`${succeeded} added, ${failed} failed`);
@@ -338,43 +370,50 @@
 		<div class="space-y-4">
 			<div>
 				<label
-					for="invite-emails"
+					for="invite-tag-input"
 					class="mb-1.5 block text-[12.5px] font-medium"
 					style="color: var(--t2)"
 				>Email addresses</label>
-				<textarea
-					id="invite-emails"
-					bind:value={inviteRaw}
-					placeholder={'Alfi Syahrin <alfi@company.com>\nalice@company.com, Bob Smith <bob@company.com>'}
-					rows="4"
-					class="w-full resize-none rounded-[9px] border px-3 py-2.5 text-[13px] leading-relaxed outline-none transition-shadow"
-					style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
-					onfocus={(e) => (e.currentTarget.style.boxShadow = '0 0 0 3px var(--brand-soft)')}
-					onblur={(e) => (e.currentTarget.style.boxShadow = '')}
-				></textarea>
+				<!-- Tag input container -->
+				<div
+					role="presentation"
+					onclick={() => inviteTagEl?.focus()}
+					class="flex min-h-[80px] flex-wrap content-start gap-1.5 rounded-[9px] border p-2.5 transition-shadow"
+					style="background: var(--s3); border-color: var(--border-h2); cursor: text; box-shadow: {inviteTagFocused ? '0 0 0 3px var(--brand-soft)' : 'none'}"
+				>
+					{#each inviteChips as { name, email }}
+						<span
+							class="inline-flex max-w-full items-center gap-1 rounded-full border py-0.5 pl-2.5 pr-1 text-[12px]"
+							style="background: var(--s1); border-color: var(--border-h2); color: var(--t1)"
+						>
+							<span class="truncate font-medium">{name}</span>
+							<span class="mono truncate" style="color: var(--t3)">{email}</span>
+							<button
+								type="button"
+								onclick={(e) => { e.stopPropagation(); removeChip(email); }}
+								aria-label="Remove {name}"
+								class="ml-0.5 grid size-4 flex-shrink-0 place-items-center rounded-full text-[11px] transition-colors hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
+								style="color: var(--t3)"
+							>×</button>
+						</span>
+					{/each}
+					<input
+						id="invite-tag-input"
+						bind:this={inviteTagEl}
+						bind:value={inviteInput}
+						onkeydown={handleTagKeydown}
+						onpaste={handleTagPaste}
+						onfocusin={() => (inviteTagFocused = true)}
+						onfocusout={() => (inviteTagFocused = false)}
+						placeholder={inviteChips.length === 0 ? 'Paste or type emails…' : ''}
+						class="min-w-[160px] flex-1 bg-transparent text-[13px] outline-none"
+						style="color: var(--t1); font-family: inherit"
+					/>
+				</div>
 				<p class="mt-1.5 text-[12px]" style="color: var(--t3)">
-					Separate multiple by comma or newline. Supports <span class="mono">Name &lt;email&gt;</span> format.
+					Paste a list or type and press <span class="mono">Enter</span> / <span class="mono">,</span> to add. Supports <span class="mono">Name &lt;email&gt;</span> format.
 				</p>
 			</div>
-
-			{#if parsedInvites.length > 0}
-				<div>
-					<p class="mb-2 text-[12px] font-medium" style="color: var(--t3)">
-						{parsedInvites.length} {parsedInvites.length === 1 ? 'person' : 'people'} to add
-					</p>
-					<div class="flex flex-wrap gap-1.5">
-						{#each parsedInvites as { name, email }}
-							<span
-								class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
-								style="background: var(--s2); border-color: var(--border-h2); color: var(--t1)"
-							>
-								<span class="font-medium">{name}</span>
-								<span class="mono" style="color: var(--t3)">{email}</span>
-							</span>
-						{/each}
-					</div>
-				</div>
-			{/if}
 
 			<div>
 				<label
@@ -408,13 +447,13 @@
 			>Cancel</button>
 			<button
 				onclick={() => $inviteMut.mutate()}
-				disabled={$inviteMut.isPending || parsedInvites.length === 0}
+				disabled={$inviteMut.isPending || inviteChips.length === 0}
 				class="rounded-[9px] bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 			>
 				{#if $inviteMut.isPending}
 					Adding…
-				{:else if parsedInvites.length > 0}
-					Add {parsedInvites.length} {parsedInvites.length === 1 ? 'member' : 'members'}
+				{:else if inviteChips.length > 0}
+					Add {inviteChips.length} {inviteChips.length === 1 ? 'member' : 'members'}
 				{:else}
 					Add members
 				{/if}
