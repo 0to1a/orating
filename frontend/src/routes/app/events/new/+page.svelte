@@ -9,7 +9,50 @@
 	let visibility = $state<'public' | 'private'>('public');
 	let cycles = $state<{ name: string }[]>([{ name: '' }, { name: '' }]);
 	let forms = $state<{ type: string; label: string }[]>([{ type: 'rating', label: '' }]);
-	let memberEmails = $state<string[]>(['']);
+	let memberChips = $state<string[]>([]);
+	let memberInput = $state('');
+	let memberTagEl = $state<HTMLInputElement | null>(null);
+	let memberTagFocused = $state(false);
+
+	function parseEmails(raw: string): string[] {
+		return raw
+			.split(/[,\n]+/)
+			.map((s) => s.trim())
+			.filter(Boolean)
+			.flatMap((entry) => {
+				const match = entry.match(/^.+?\s*<([^>]+)>\s*$/);
+				const email = (match ? match[1] : entry).trim().toLowerCase();
+				return email.includes('@') ? [email] : [];
+			});
+	}
+
+	function addMemberEntries(raw: string) {
+		const existing = new Set(memberChips);
+		const fresh = parseEmails(raw).filter((e) => !existing.has(e));
+		memberChips = [...memberChips, ...fresh];
+	}
+
+	function removeMemberChip(email: string) {
+		memberChips = memberChips.filter((e) => e !== email);
+	}
+
+	function handleMemberKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+			if (memberInput.trim()) {
+				e.preventDefault();
+				addMemberEntries(memberInput);
+				memberInput = '';
+			}
+		} else if (e.key === 'Backspace' && !memberInput && memberChips.length > 0) {
+			memberChips = memberChips.slice(0, -1);
+		}
+	}
+
+	function handleMemberPaste(e: ClipboardEvent) {
+		e.preventDefault();
+		addMemberEntries(e.clipboardData?.getData('text') ?? '');
+		memberInput = '';
+	}
 
 	const createMut = createMutation({
 		mutationFn: () =>
@@ -20,7 +63,7 @@
 					visibility,
 					cycles: cycles.filter((c) => c.name.trim()).map((c) => ({ name: c.name })),
 					forms: forms.filter((f) => f.label.trim()).map((f) => ({ type: f.type, label: f.label })),
-					members: visibility === 'private' ? memberEmails.filter((e) => e.trim()) : null
+					members: visibility === 'private' ? memberChips : null
 				}
 			}),
 		onSuccess: (r) => {
@@ -34,8 +77,6 @@
 	function removeCycle(i: number) { if (cycles.length > 1) cycles = cycles.filter((_, idx) => idx !== i) }
 	function addForm() { forms = [...forms, { type: 'rating', label: '' }] }
 	function removeForm(i: number) { if (forms.length > 1) forms = forms.filter((_, idx) => idx !== i) }
-	function addEmail() { memberEmails = [...memberEmails, ''] }
-	function removeEmail(i: number) { if (memberEmails.length > 1) memberEmails = memberEmails.filter((_, idx) => idx !== i) }
 </script>
 
 <div class="canvas">
@@ -114,18 +155,41 @@
 				<div class="card-h" style="margin-bottom:8px">Invite members</div>
 				<p style="font-size:12.5px;color:var(--t3);margin-bottom:18px">Add email addresses of people who can join this event.</p>
 
-				{#each memberEmails as _, i}
-					<div class="row-b">
-						<input
-							class="ipt"
-							type="email"
-							bind:value={memberEmails[i]}
-							placeholder="email@example.com"
-						/>
-						<button class="x" onclick={() => removeEmail(i)} aria-label="Remove email">×</button>
-					</div>
-				{/each}
-				<button class="add-row" onclick={addEmail}>+ Add email</button>
+				<!-- Tag input -->
+				<div
+					role="presentation"
+					onclick={() => memberTagEl?.focus()}
+					style="display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;min-height:72px;border-radius:9px;border:1px solid var(--border-h2);background:var(--s2);padding:10px;cursor:text;transition:box-shadow .15s;box-shadow:{memberTagFocused ? '0 0 0 3px var(--brand-soft)' : 'none'}"
+				>
+					{#each memberChips as email}
+						<span style="display:inline-flex;align-items:center;gap:4px;background:var(--s3);border:1px solid var(--border-h2);border-radius:999px;padding:2px 8px 2px 10px;font-size:12px;color:var(--t1)">
+							<span style="font-family:var(--font-mono,monospace)">{email}</span>
+							<button
+								type="button"
+								onclick={(e) => { e.stopPropagation(); removeMemberChip(email); }}
+								aria-label="Remove {email}"
+								style="display:grid;place-items:center;width:16px;height:16px;border-radius:50%;border:none;background:none;cursor:pointer;font-size:13px;color:var(--t3);padding:0;line-height:1"
+								onmouseenter={(e) => { e.currentTarget.style.background='var(--danger-soft)'; e.currentTarget.style.color='var(--danger)'; }}
+								onmouseleave={(e) => { e.currentTarget.style.background='none'; e.currentTarget.style.color='var(--t3)'; }}
+							>×</button>
+						</span>
+					{/each}
+					<input
+						bind:this={memberTagEl}
+						bind:value={memberInput}
+						onkeydown={handleMemberKeydown}
+						onpaste={handleMemberPaste}
+						onfocusin={() => (memberTagFocused = true)}
+						onfocusout={() => (memberTagFocused = false)}
+						placeholder={memberChips.length === 0 ? 'Paste or type emails…' : ''}
+						style="flex:1;min-width:160px;border:none;background:transparent;outline:none;font-size:13px;color:var(--t1);font-family:inherit"
+					/>
+				</div>
+				{#if memberChips.length > 0}
+					<p style="font-size:12px;color:var(--t3);margin-top:8px">{memberChips.length} {memberChips.length === 1 ? 'person' : 'people'} added</p>
+				{:else}
+					<p style="font-size:12px;color:var(--t3);margin-top:8px">Paste a list or type and press Enter / comma. Supports <span style="font-family:monospace">Name &lt;email&gt;</span> format.</p>
+				{/if}
 			</div>
 		{/if}
 
