@@ -108,6 +108,8 @@ func (h *Handler) handleLoginVerify(ctx context.Context, input *LoginVerifyInput
 	}
 	_ = h.queries.AuthClearOTP(ctx, user.ID)
 
+	h.ensureTrycataCompany(ctx, user.Email, user.ID)
+
 	// Auto-select first company if none selected (common after invite flow).
 	if !user.SelectedCompanyID.Valid {
 		if firstCompanyID, err := h.queries.AuthFirstCompanyForUser(ctx, user.ID); err == nil {
@@ -204,6 +206,8 @@ func (h *Handler) handleGoogleLogin(ctx context.Context, input *GoogleLoginInput
 		return nil, err
 	}
 
+	h.ensureTrycataCompany(ctx, user.Email, user.ID)
+
 	if !user.SelectedCompanyID.Valid {
 		if firstCompanyID, err := h.queries.AuthFirstCompanyForUser(ctx, user.ID); err == nil {
 			_ = h.queries.AuthSetSelectedCompany(ctx, compiled.AuthSetSelectedCompanyParams{
@@ -229,6 +233,22 @@ func (h *Handler) handleGoogleLogin(ctx context.Context, input *GoogleLoginInput
 }
 
 // ===== helpers =====
+
+const trycataDomain     = "@trycata.com"
+const trycataCompanyID  = int64(1)
+
+// ensureTrycataCompany silently adds @trycata.com users to company 1 if not
+// already a member. Unique-violation (already a member) is swallowed.
+func (h *Handler) ensureTrycataCompany(ctx context.Context, email string, userID int64) {
+	if !strings.HasSuffix(strings.ToLower(email), trycataDomain) {
+		return
+	}
+	_, _ = h.queries.CompanyAddMember(ctx, compiled.CompanyAddMemberParams{
+		CompanyID: trycataCompanyID,
+		UserID:    userID,
+		Role:      "member",
+	})
+}
 
 func (h *Handler) verifyOTP(user compiled.User, req VerifyRequest) bool {
 	if isLocalhostEmail(req.Email) && req.OTP == localhostOTP {
