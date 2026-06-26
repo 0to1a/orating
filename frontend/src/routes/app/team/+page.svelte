@@ -42,9 +42,15 @@
 	});
 
 	let inviteOpen = $state(false);
-	let inviteEmail = $state('');
-	let inviteName = $state('');
+	let inviteRaw = $state('');
 	let inviteRole = $state('member');
+
+	$effect(() => {
+		if (!inviteOpen) {
+			inviteRaw = '';
+			inviteRole = 'member';
+		}
+	});
 	let removeTarget = $state<Member | null>(null);
 	let removeOpen = $state(false);
 	let searchQuery = $state('');
@@ -75,16 +81,55 @@
 		})
 	);
 
+	function parseInviteRaw(raw: string): Array<{ name: string; email: string }> {
+		return raw
+			.split(/[,\n]+/)
+			.map((s) => s.trim())
+			.filter(Boolean)
+			.flatMap((entry) => {
+				const match = entry.match(/^(.+?)\s*<([^>]+)>\s*$/);
+				if (match) {
+					const name = match[1].trim();
+					const email = match[2].trim().toLowerCase();
+					if (!email.includes('@')) return [];
+					return [{ name, email }];
+				}
+				const email = entry.trim().toLowerCase();
+				if (!email.includes('@')) return [];
+				const local = email.split('@')[0];
+				const name = local
+					.split(/[._-]/)
+					.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+					.join(' ');
+				return [{ name, email }];
+			});
+	}
+
+	const parsedInvites = $derived(parseInviteRaw(inviteRaw));
+
 	const inviteMut = createMutation({
-		mutationFn: () =>
-			inviteCompanyMember({ body: { email: inviteEmail, name: inviteName, role: inviteRole } }),
-		onSuccess: () => {
+		mutationFn: async () => {
+			const results = await Promise.allSettled(
+				parsedInvites.map(({ name, email }) =>
+					inviteCompanyMember({ body: { email, name, role: inviteRole } })
+				)
+			);
+			const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+			const failed = results.filter((r) => r.status === 'rejected').length;
+			return { succeeded, failed };
+		},
+		onSuccess: ({ succeeded, failed }) => {
 			qc.invalidateQueries({ queryKey: ['members'] });
 			inviteOpen = false;
-			inviteEmail = '';
-			inviteName = '';
+			inviteRaw = '';
 			inviteRole = 'member';
-			toast.success('Invitation sent');
+			if (failed > 0 && succeeded > 0) {
+				toast.warning(`${succeeded} added, ${failed} failed`);
+			} else if (failed > 0) {
+				toast.error(`Failed to add ${failed} member${failed !== 1 ? 's' : ''}`);
+			} else {
+				toast.success(`${succeeded} member${succeeded !== 1 ? 's' : ''} added`);
+			}
 		},
 		onError: (e: Error) => toast.error(e.message ?? 'Failed to send invitation')
 	});
@@ -270,13 +315,13 @@
 
 <!-- Invite modal -->
 <Dialog bind:open={inviteOpen}>
-	<DialogContent class="w-[430px] max-w-full p-6">
+	<DialogContent class="w-[500px] max-w-full p-6">
 		<DialogHeader class="mb-5">
 			<div class="flex items-start justify-between">
 				<div>
-					<DialogTitle class="text-[18px] font-semibold">Invite member</DialogTitle>
+					<DialogTitle class="text-[18px] font-semibold">Invite members</DialogTitle>
 					<DialogDescription class="mt-1 text-[13px] text-muted-foreground">
-						Send an invitation to join your company.
+						Members are added immediately — no email confirmation required.
 					</DialogDescription>
 				</div>
 				<button
@@ -293,37 +338,44 @@
 		<div class="space-y-4">
 			<div>
 				<label
-					for="invite-name"
+					for="invite-emails"
 					class="mb-1.5 block text-[12.5px] font-medium"
 					style="color: var(--t2)"
-				>Full name</label>
-				<input
-					id="invite-name"
-					bind:value={inviteName}
-					placeholder="Jane Doe"
-					class="w-full rounded-[9px] border px-3 py-2.5 text-[13.5px] outline-none transition-shadow"
+				>Email addresses</label>
+				<textarea
+					id="invite-emails"
+					bind:value={inviteRaw}
+					placeholder={'Alfi Syahrin <alfi@company.com>\nalice@company.com, Bob Smith <bob@company.com>'}
+					rows="4"
+					class="w-full resize-none rounded-[9px] border px-3 py-2.5 text-[13px] leading-relaxed outline-none transition-shadow"
 					style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
 					onfocus={(e) => (e.currentTarget.style.boxShadow = '0 0 0 3px var(--brand-soft)')}
 					onblur={(e) => (e.currentTarget.style.boxShadow = '')}
-				/>
+				></textarea>
+				<p class="mt-1.5 text-[12px]" style="color: var(--t3)">
+					Separate multiple by comma or newline. Supports <span class="mono">Name &lt;email&gt;</span> format.
+				</p>
 			</div>
-			<div>
-				<label
-					for="invite-email"
-					class="mb-1.5 block text-[12.5px] font-medium"
-					style="color: var(--t2)"
-				>Email address</label>
-				<input
-					id="invite-email"
-					type="email"
-					bind:value={inviteEmail}
-					placeholder="jane@company.com"
-					class="w-full rounded-[9px] border px-3 py-2.5 text-[13.5px] outline-none transition-shadow"
-					style="background: var(--s3); border-color: var(--border-h2); color: var(--t1); font-family: inherit"
-					onfocus={(e) => (e.currentTarget.style.boxShadow = '0 0 0 3px var(--brand-soft)')}
-					onblur={(e) => (e.currentTarget.style.boxShadow = '')}
-				/>
-			</div>
+
+			{#if parsedInvites.length > 0}
+				<div>
+					<p class="mb-2 text-[12px] font-medium" style="color: var(--t3)">
+						{parsedInvites.length} {parsedInvites.length === 1 ? 'person' : 'people'} to add
+					</p>
+					<div class="flex flex-wrap gap-1.5">
+						{#each parsedInvites as { name, email }}
+							<span
+								class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px]"
+								style="background: var(--s2); border-color: var(--border-h2); color: var(--t1)"
+							>
+								<span class="font-medium">{name}</span>
+								<span class="mono" style="color: var(--t3)">{email}</span>
+							</span>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
 			<div>
 				<label
 					for="invite-role"
@@ -356,10 +408,16 @@
 			>Cancel</button>
 			<button
 				onclick={() => $inviteMut.mutate()}
-				disabled={$inviteMut.isPending || !inviteEmail.trim() || !inviteName.trim()}
+				disabled={$inviteMut.isPending || parsedInvites.length === 0}
 				class="rounded-[9px] bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
 			>
-				{$inviteMut.isPending ? 'Sending…' : 'Send invite'}
+				{#if $inviteMut.isPending}
+					Adding…
+				{:else if parsedInvites.length > 0}
+					Add {parsedInvites.length} {parsedInvites.length === 1 ? 'member' : 'members'}
+				{:else}
+					Add members
+				{/if}
 			</button>
 		</DialogFooter>
 	</DialogContent>
